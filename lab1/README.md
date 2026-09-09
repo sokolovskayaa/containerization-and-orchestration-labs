@@ -14,7 +14,9 @@
 ## Мониторинг
 - Посмотреть потребление ресурсов: `ps -eo pid,vsz,rss,%mem,%cpu,comm | grep [p]ython3` / `top -p $(pgrep -d ',' 'python')`# lab-part1
 
-Необходимо поместить процесс в свои namespaces через `unshare` (pid, mount, net, uts, ipc и user
+## Часть 2
+
+Необходимо поместить процесс в свои namespaces через `unshare` (pid, mount, net, uts, ipc и user)
 
 Так как на маке нет namespaces и unshare ( есть только на линуксе ), запушу виртуалку Linux и уже внутри создам свой namespace
 
@@ -62,7 +64,7 @@
 
 Иначе говоря, проблема в том, что я не примонтировал /proc в новый mount namespace
 
-/proc у тебя всё ещё хостовый, поэтому видит все процессы
+/proc у меня всё ещё хостовый, поэтому видит все процессы
 
 ![Снимок экрана 2026-09-09 в 01.56.05.png](lab-part1/%D0%A1%D0%BD%D0%B8%D0%BC%D0%BE%D0%BA_%D1%8D%D0%BA%D1%80%D0%B0%D0%BD%D0%B0_2026-09-09_%D0%B2_01.56.05.png)
 
