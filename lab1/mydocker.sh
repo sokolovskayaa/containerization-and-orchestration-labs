@@ -1,6 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Создаем группу
+CG=/sys/fs/cgroup/mygroup
+sudo mkdir "$CG"
+
+MEMORY_MAX=$[100*1024*1024]
+PIDS_MAX=10
+CPU_MAX="10000 100000"
+
+# Выставляем лимиты на группу
+echo "$MEMORY_MAX" | sudo tee "$CG/memory.max"
+echo "$PIDS_MAX" | sudo tee "$CG/pids.max"
+echo "$CPU_MAX" | sudo tee "$CG/cpu.max"
+echo 0 | sudo tee "$CG/memory.swap.max"
+
+echo $$ | sudo tee "$CG/cgroup.procs"
+
 unshare \
     --pid \
     --mount \
@@ -42,4 +58,7 @@ sudo nsenter -t "$PID" -n \
 sudo nsenter -t "$PID" -n \
     .venv/bin/flask --app main run --host=0.0.0.0
 
+sudo kill -9 "$PID"
+sudo pkill sleep
 sudo ip link delete veth-host
+sudo rmdir /sys/fs/cgroup/mygroup
