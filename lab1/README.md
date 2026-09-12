@@ -1,4 +1,5 @@
 # Lab 1
+https://github.com/KeladKaal/containerization-and-orchestration/blob/main-rus/lecture-1-docker/lab.md
 ## Установка
 1. Необходим Python версии 3.xx (https://www.python.org/downloads/)
 2. `python3 -m venv .venv`
