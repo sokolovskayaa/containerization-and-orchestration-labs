@@ -31,34 +31,40 @@ unshare \
         ip link set lo up
 
         echo "Container started"
-        sleep infinity
+        until ip link show veth-cont >/dev/null 2>&1; do sleep 0.1; done
+
+        exec setpriv \
+        --bounding-set=-all \
+        --inh-caps=-all \
+        --ambient-caps=-all \
+        ./seccomp-run .venv/bin/flask --app main run --host=0.0.0.0
     ' &
 
-PID=$!
+LAUNCHER_PID=$!
+echo "unshare launcher PID on host: $LAUNCHER_PID"
 
-echo "Container PID: $PID"
+echo "Container PID: $LAUNCHER_PID"
 
 # Создаём veth-пару в host network namespace.
 sudo ip link add veth-host type veth peer name veth-cont
 
 # Переносим один конец в network namespace контейнера.
-sudo ip link set veth-cont netns "$PID"
+sudo ip link set veth-cont netns "$LAUNCHER_PID"
 
 # Настраиваем host.
 sudo ip addr add 10.0.0.1/24 dev veth-host
 sudo ip link set veth-host up
 
 # Настраиваем container.
-sudo nsenter -t "$PID" -n \
+sudo nsenter -t "$LAUNCHER_PID" -n \
     ip addr add 10.0.0.2/24 dev veth-cont
 
-sudo nsenter -t "$PID" -n \
+sudo nsenter -t "$LAUNCHER_PID" -n \
     ip link set veth-cont up
 
-sudo nsenter -t "$PID" -n \
-    .venv/bin/flask --app main run --host=0.0.0.0
+CONTAINER_PID=$(pgrep -P "$LAUNCHER_PID")
+echo "Flask PID on host: $CONTAINER_PID"
 
-sudo kill -9 "$PID"
-sudo pkill sleep
+sudo kill -9 "$LAUNCHER_PID"
 sudo ip link delete veth-host
 sudo rmdir /sys/fs/cgroup/mygroup
