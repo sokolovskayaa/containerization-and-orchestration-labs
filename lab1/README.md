@@ -261,3 +261,194 @@ stress-ng --fork 100 --timeout 10s
 `pids.current` замер ровно на 10 - это в точности `pids.max`, и выше он не поднимется никогда.
 
 За несколько секунд он вырос с 302 до 687 и продолжал расти, пока работала stress-ng. Это не число процессов, а число отбитых попыток их создать.
+
+## Часть 4
+
+Последний шаг `mydocker.sh` срезает все привилегии и отдаёт управление сервису,
+который становится PID 1 внутри контейнера:
+
+```bash
+exec setpriv \
+    --bounding-set=-all \
+    --inh-caps=-all \
+    --ambient-caps=-all \
+    .venv/bin/flask --app main run --host=0.0.0.0
+```
+
+Что даёт каждый флаг:
+
+- `--bounding-set=-all` — процесс уже никогда не сможет получить эти capabilities обратно;
+- `--inh-caps=-all` — детям ничего не передаётся;
+- `--ambient-caps=-all` — не-root процессы не наследуют capabilities при exec.
+
+Втроём они дают гарантию: ни сам сервис, ни что-либо, что он запустит, привилегий не получит.
+
+![mydocker.sh в редакторе: блок unshare с --pid/--mount/--net/--uts/--ipc/--user и финальный exec setpriv; в терминале ниже сервис уже стартовал, а в /proc/<pid>/status все строки CapInh, CapPrm, CapEff, CapBnd и CapAmb — нули](lab-part4/part4-capabilities-dropped.png)
+
+Вот сброшенные capabilities
+
+![cat /proc/100155/status | grep Cap: CapInh, CapPrm, CapEff, CapBnd и CapAmb равны 0000000000000000 — у процесса сервиса не осталось ни одной capability](lab-part4/part4-capabilities-status.png)
+
+Далее мы повесили ограничение на системные вызовы
+
+мы вообще не вкурили как правильно ограничить их, поэтому решили написать ИИшке, чтобы он сделал  лаунчер seccomp-run.c, который устанавливает seccomp профиль
+
+и запускаем 
+
+![установка libseccomp-dev и запуск ./seccomp-run .venv/bin/python -c 'import os; print(os.getppid())' — вместо PID родителя печатается -1](lab-part4/part4-seccomp-getppid.png)
+
+лаунчер seccomp-run.c навешивает seccomp-профиль на процесс. Вывод получился -1
+
+В профиле на syscall getppid стоит правило типа SCMP_ACT_ERRNO(EPERM): ядро не выполняет вызов, а сразу возвращает ошибку. Обычный getppid() не может завершиться неудачей никогда, поэтому Python даже не проверяет errno и печатает сырое возвращённое значение -1
+
+Вот подверждение, что seccomp реально висит на процессе
+
+Мы прочитали /proc/109024/status
+
+Побочно это ещё и обязательное условие: без CAP_SYS_ADMIN навесить seccomp-фильтр можно только с этим битом.
+
+NoNewPrivs: 1 Процесс и его потомки больше не могут повысить привилегии через setuid-бинарники
+Ровно 1 фильтр-программа
+
+
+![cat /proc/109024/status | grep -E "NoNewPrivs|Seccomp": NoNewPrivs 1, Seccomp 2 (режим filter), Seccomp_filters 1 — фильтр действительно висит на процессе](lab-part4/part4-seccomp-proc-status.png)
+
+## Часть 5 
+
+
+Всё, что выше мы собирали руками из отдельных утилит, Docker прячет за одной командой
+
+Делаем запуск docker run
+
+```bash
+sudo docker run --rm --name api-docker \
+  --memory=100m \
+  --cpus=0.1 \
+  --pids-limit=10 \
+  --cap-drop=ALL \
+  --security-opt no-new-privileges \
+  -p 127.0.0.1:5000:5000 \
+  -v "$PWD":/app:ro \
+  -w /app \
+  python:3.12-slim \
+  sh -c 'pip install --no-cache-dir -r requirements.txt && flask --app main run --host=0.0.0.0'
+```
+
+`docker run`. Ниже - построчное сопоставление наших шагов с тем, что делает сам Docker:
+
+| Аспект          | `mydocker.sh`                         | Docker                                                              |
+|-----------------|---------------------------------------|---------------------------------------------------------------------|
+| Namespaces      | `unshare` вручную                     | OCI runtime создаёт автоматически                                   |
+| Лимиты          | запись в файлы cgroup v2              | Docker создаёт и настраивает cgroup                                 |
+| Capabilities    | `setpriv`                             | `--cap-drop=ALL`                                                    |
+| Seccomp         | наш `seccomp-run` блокирует `getppid` | стандартный профиль Docker, другой набор правил                     |
+| Сеть            | ручной `veth` и IP                    | bridge, NAT, DNS и port mapping                                     |
+| Root filesystem | использует FS хоста                   | image layers, overlay filesystem, mount setup                       |
+| Lifecycle       | наш `trap cleanup`                    | `runc`/daemon управляют PID, сигналами, логами и удалением ресурсов |
+
+
+Архитектурное сравнение:
+
+![схема архитектуры: Docker CLI превращает флаги в JSON и шлёт POST /containers/create и /containers/{id}/start через unix-сокет /var/run/docker.sock, дальше на Docker Server цепочка API → dockerd → containerd → containerd-shim → runc; ./mydocker.sh обращается к ядру Linux (namespaces, cgroups, caps, seccomp, overlayfs, iptables) напрямую, минуя весь этот стек](lab-part5/part5-docker-vs-mydocker.png)
+
+
+По сути `mydocker.sh` — это ручная сборка тех же примитивов ядра: namespaces, cgroups,
+capabilities и seccomp. Docker добавляет к ним образы, сеть и управление жизненным циклом.
+
+## Часть 6
+
+### что реально лежит в слоях
+
+Собрали из одного и того же приложения два образа - `lab1-api:baseline` (обычный
+Dockerfile) и `lab1-api:multistage` (зависимости собираются в отдельной builder-стадии) -
+и сравнили их послойно:
+
+```bash
+sudo docker history lab1-api:baseline
+sudo docker history lab1-api:multistage
+```
+
+На скриншоте два вывода подряд: сверху `baseline`, снизу `multistage`. Нижние восемь строк
+у обоих совпадают - это база `python:3.12-slim`: rootfs от debuerreotype 87.5 MB, apt-слои
+41.4 MB и 13.2 MB, слой сборки Python 16.4 MB и пачка `ENV` по 0 B. `<missing>` в колонке
+IMAGE означает, что слой унаследован из базового образа и своего тега локально не имеет.
+
+Отличаются только верхние, «наши» слои:
+
+| Слой                     | `baseline` | `multistage` |
+|--------------------------|-----------|--------------|
+| `WORKDIR /app`           | 8.19 kB   | 8.19 kB      |
+| `COPY /wheels /wheels`   | —         | 659 kB       |
+| `COPY requirements.txt`  | 12.3 kB   | 12.3 kB      |
+| `RUN pip install`        | 15.3 MB   | 15.3 MB      |
+| `COPY main.py`           | 12.3 kB   | 12.3 kB      |
+| `EXPOSE 5000` / `CMD`    | 0 B       | 0 B          |
+
+Главное, что видно прямо в выводе: выигрыша по размеру multi-stage здесь **не дал** —
+наоборот, финальный образ стал на 659 kB толще baseline. 
+
+Причина в том, что мы скопировали
+в финальную стадию сами wheels (`COPY /wheels /wheels`) и поверх них всё равно выполнили
+`pip install`, так что те же 15.3 MB зависимостей легли рядом с лишней копией колёс.
+
+![docker history lab1-api:baseline и lab1-api:multistage: общая база python:3.12-slim и разница в верхних слоях — у multistage лишний слой COPY /wheels /wheels на 659 kB](lab-part6/part6-docker-history-baseline-vs-multistage.png)
+
+### данные переживают контейнер
+
+Создали именованный том, записали в него файл из одного контейнера, удалили контейнер
+(`--rm`) и прочитали файл уже из нового:
+
+```bash
+sudo docker volume create lab1-api-data
+
+sudo docker run -d --rm --name api-volume \
+  -v lab1-api-data:/data \
+  lab1-api:baseline
+sudo docker exec api-volume sh -c 'echo persistent > /data/state.txt'
+sudo docker stop api-volume          # контейнер удалён вместе со своим writable-слоем
+
+sudo docker run -d --rm --name api-volume \
+  -v lab1-api-data:/data \
+  lab1-api:baseline
+sudo docker exec api-volume cat /data/state.txt
+sudo docker stop api-volume
+```
+
+На скриншоте в выводе видно: `lab1-api-data` — имя созданного тома, затем ID первого
+контейнера (`8e1079db83ca…`), `api-volume` от `docker stop`, ID уже второго контейнера
+(`c273cea1b83d…`) и в конце — `persistent`. Этот `persistent` прочитан из **другого**
+контейнера: первый к этому моменту не существует, а файл на месте.
+
+Последняя команда на скриншоте читает тот же файл с хоста, минуя Docker:
+
+```bash
+sudo cat /var/lib/docker/volumes/lab1-api-data/_data/state.txt
+# persistent
+```
+
+То есть данные тома физически лежат в `/var/lib/docker/volumes/<имя>/_data` и к жизненному
+циклу контейнера не привязаны вообще.
+
+![Демонстрация named volume: файл, записанный в /data первым контейнером, читается вторым после удаления первого, и тот же файл виден на хосте в /var/lib/docker/volumes/lab1-api-data/_data/state.txt](lab-part6/part6-named-volume.png)
+
+### Writable-слой: данные умирают вместе с контейнером
+
+Тот же сценарий, но файл пишется не в том, а в обычный каталог образа `/app`:
+
+```bash
+sudo docker run -d --rm --name api-ephemeral lab1-api:baseline
+sudo docker exec api-ephemeral sh -c 'echo transient > /app/state.txt'
+sudo docker exec api-ephemeral cat /app/state.txt
+sudo docker stop api-ephemeral
+
+sudo docker run -d --rm --name api-ephemeral lab1-api:baseline
+sudo docker exec api-ephemeral test ! -e /app/state.txt && echo "file disappeared"
+sudo docker stop api-ephemeral
+```
+
+эксперимент с эфемерным контейнером. В выводе: ID первого контейнера, `transient` — файл успешно прочитан, пока контейнер жив, `api-ephemeral` от `stop`, ID второго контейнера и `file disappeared` — в новом контейнере файла по тому же пути уже нет.
+
+Запись шла в writable-слой поверх image layers, а он создаётся при запуске контейнера и уничтожается вместе с ним. Образ при этом не менялся: второй контейнер поднялся из тех же
+read-only слоёв, что и первый.
+
+![Демонстрация writable-слоя: файл /app/state.txt со значением transient читается внутри работающего контейнера, но после пересоздания контейнера проверка печатает "file disappeared"](lab-part6/part6-writable-layer.png)
