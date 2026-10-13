@@ -1,0 +1,54 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ .Release.Name }}-alerts
+  labels:
+    release: monitoring
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  groups:
+    - name: api.rules
+      rules:
+        - alert: ApiHighErrorRate
+          expr: |
+            (
+              sum(rate(api_errors_total{job="api",namespace="lab2"}[1m]))
+              /
+              sum(rate(api_requests_total{job="api",namespace="lab2"}[1m]))
+            ) > 0.1
+          for: 30s
+          labels:
+            severity: critical
+            service: api
+          annotations:
+            summary: "Высокий процент ошибок API"
+            description: "Доля ответов 5xx у API превышает 10%."
+
+        - alert: ApiHighLatency
+          expr: |
+            histogram_quantile(
+              0.95,
+              sum(rate(api_request_duration_seconds_bucket{job="api",namespace="lab2"}[5m]))
+              by (le)
+            ) > 1
+          for: 30s
+          labels:
+            severity: critical
+            service: api
+          annotations:
+            summary: "Высокая задержка API"
+            description: "95-й перцентиль задержки API превышает 1 секунду."
+
+        - alert: ApiUnavailable
+          expr: |
+            kube_deployment_status_replicas_available{
+              deployment="api",
+              namespace="lab2"
+            } < 1
+          for: 30s
+          labels:
+            severity: critical
+            service: api
+          annotations:
+            summary: "API недоступен"
+            description: "У Deployment api нет доступных реплик."

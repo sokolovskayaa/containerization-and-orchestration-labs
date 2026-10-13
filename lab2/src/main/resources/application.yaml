@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: lab2
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  endpoints:
+    web:
+      exposure:
+        include: health,info

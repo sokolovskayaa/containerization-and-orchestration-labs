@@ -1,0 +1,23 @@
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: api-webhook
+  labels:
+    release: monitoring
+spec:
+  route:
+    receiver: api-webhook
+    groupBy:
+      - alertname
+    groupWait: 5s
+    groupInterval: 30s
+    repeatInterval: 1h
+    matchers:
+      - name: service
+        value: api
+        matchType: "="
+  receivers:
+    - name: api-webhook
+      webhookConfigs:
+        - url: https://webhook.site/bec51c03-423d-4dab-a6b2-1a3d3e9ebe55
+          sendResolved: true
