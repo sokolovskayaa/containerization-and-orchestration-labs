@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: api
+  labels: 
+    app: api
+spec:
+  containers:
+  - name: api
+    image: registry.shop.local/api:1.0.0
+    ports: 
+    - containerPort: 8080

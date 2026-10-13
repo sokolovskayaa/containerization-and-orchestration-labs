@@ -1,0 +1,19 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy               # Cluster… значит, на весь кластер
+metadata:
+  name: trusted-registry
+spec:
+  rules:
+  - name: only-shop-registry
+    match:                        # на ЧТО смотреть (как WHERE в SQL)
+      any:
+      - resources:
+          kinds:
+          - Pod
+    validate:
+      failureAction: Enforce      # Enforce = отклонять; Audit = пропустить, но записать в отчёт
+      message: "Образы разрешены только из registry.shop.local"
+      pattern:                    # как ДОЛЖЕН выглядеть объект
+        spec:
+          containers:
+          - image: "registry.shop.local/*"

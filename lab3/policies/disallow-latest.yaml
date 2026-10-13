@@ -1,0 +1,32 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy               # Cluster… значит, на весь кластер
+metadata:
+  name: disallow-latest
+spec:
+  rules:
+  - name: only-shop-not-latest
+    match:                        # на ЧТО смотреть (как WHERE в SQL)
+      any:
+      - resources:
+          kinds:
+          - Pod
+    validate:
+      failureAction: Enforce      # Enforce = отклонять; Audit = пропустить, но записать в отчёт
+      message: "НЕЛЬЗЯ СТАВИТЬ latest tag! Используете конкретные версии!"
+      pattern:                    # как ДОЛЖЕН выглядеть объект
+        spec:
+          containers:
+          - image: "!*:latest"    # тег не latest
+  - name: only-shop-image-tag
+    match:                        # на ЧТО смотреть (как WHERE в SQL)
+      any:
+      - resources:
+          kinds:
+          - Pod
+    validate:
+      failureAction: Enforce      # Enforce = отклонять; Audit = пропустить, но записать в отчёт
+      message: "Укажи тег образа явно, например api:1.0.0"
+      pattern:                    # как ДОЛЖЕН выглядеть объект
+        spec:
+          containers:
+          - image: "*:*"          # тег обязателен: без него поставится неявный latest

@@ -1,0 +1,20 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy               # Cluster… значит, на весь кластер
+metadata:
+  name: disallow-privileged
+spec:
+  rules:
+  - name: only-shop-privileged
+    match:                        # на ЧТО смотреть (как WHERE в SQL)
+      any:
+      - resources:
+          kinds:
+          - Pod
+    validate:
+      failureAction: Enforce      # Enforce = отклонять; Audit = пропустить, но записать в отчёт
+      message: "Privileged-контейнеры запрещены: securityContext.privileged обязан быть false! Убери securityContext.privileged (default false)"
+      pattern:                    # как ДОЛЖЕН выглядеть объект
+        spec:
+          containers:
+          - =(securityContext):
+              =(privileged): false 
