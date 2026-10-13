@@ -1,0 +1,22 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy               # Cluster… значит, на весь кластер
+metadata:
+  name: require-limits
+spec:
+  rules:
+  - name: only-shop-limits
+    match:                        # на ЧТО смотреть (как WHERE в SQL)
+      any:
+      - resources:
+          kinds:
+          - Pod
+    validate:
+      failureAction: Enforce      # Enforce = отклонять; Audit = пропустить, но записать в отчёт
+      message: "Лимиты не указаны: задай resources.limits.cpu и resources.limits.memory для каждого контейнера"
+      pattern:                    # как ДОЛЖЕН выглядеть объект
+        spec:
+          containers:
+          - resources:
+              limits:
+                memory: "?*"
+                cpu: "?*"          # ← допиши сам

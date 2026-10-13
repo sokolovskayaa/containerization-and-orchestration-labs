@@ -1,0 +1,19 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy               # Cluster… значит, на весь кластер
+metadata:
+  name: require-labels
+spec:
+  rules:
+  - name: only-shop-labels
+    match:                        # на ЧТО смотреть (как WHERE в SQL)
+      any:
+      - resources:
+          kinds:
+          - Pod
+    validate:
+      failureAction: Enforce      # Enforce = отклонять; Audit = пропустить, но записать в отчёт
+      message: "Лейблы не указаны: задай metadata.labels.app для каждого контейнера"
+      pattern:                    # как ДОЛЖЕН выглядеть объект
+        metadata:
+          labels:
+            app: "?*"
