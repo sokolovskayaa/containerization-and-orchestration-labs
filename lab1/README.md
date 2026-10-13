@@ -452,3 +452,49 @@ sudo docker stop api-ephemeral
 read-only слоёв, что и первый.
 
 ![Демонстрация writable-слоя: файл /app/state.txt со значением transient читается внутри работающего контейнера, но после пересоздания контейнера проверка печатает "file disappeared"](lab-part6/part6-writable-layer.png)
+
+## Часть 8
+
+Для мониторинга решил развернуть весь стек через docker-compose, всего используем 4 сервиса: api (наш написанный сервис), cadvisor (метрики контейнеров), prometheus (собирает и хранит метрики) и grafana (рисует красивые графики)
+
+Из интересного узнал что cAdvisor собирает метрики напрямую из тех cgroup, которые под капотом использует docker, поэтому никакой "связи" между ним и контейнерами устанавливать не надо, он сам все найдет в cgroup. Но для этого в volume'ах надо смонтировать несколько путей, где хранится эта информация (/:/rootfs, /var/run:/var/run, ...)
+
+В отдельном prometheus.yml написал простой конфиг с единственным target - cAdvisor
+
+Затем `docker compose up -d`, захожу на `localhost:9090` (prometheus), вижу cadvisor с State: UP
+![prometheusdashboard.png](lab-part8/prometheusdashboard.png)
+Перехожу на `localhost:8080` (cAdvisor), вижу сырые метрики
+![cadvisormetrics.png](lab-part8/cadvisormetrics.png)
+перехожу в query, делаю запрос container_memory_usage_bytes{name="lab1-api"}, выполняю `curl localhost:5000/eat?mb=50`, и график растет, ...
+![prometheusquery.png](lab-part8/prometheusquery.png)
+..., значит все работает, осталось сделать дашборды в графане
+
+
+захожу в графану `localhost:3000`, подключаю prometheus
+![grafanaprometheusconnection.png](lab-part8/grafanaprometheusconnection.png)
+(помню, что вместо localhost нужно писать название сервиса - prometheus, так как контейнеры изолированы и у всех "свой" localhost)
+
+
+теперь самое приятное (и простое) - рисование графиков
+
+создам 3 панели, memory usage, cpu usage, throttling, запросы к prometheus простые:
+- `container_memory_working_set_bytes{name="lab1-api"}`
+- `rate(container_cpu_usage_seconds_total{name="lab1-api"}[1m])`
+- `100 * rate(container_cpu_cfs_throttled_periods_total{name="lab1-api"}[1m]) / rate(container_cpu_cfs_periods_total{name="lab1-api"}[1m])`
+добавил units, сделал time range 5 минут, refresh 5 секунд, сохранил
+![grafanadashboard.png](lab-part8/grafanadashboard.png)
+
+
+делаю `eat` и `burn`, и на графиках виден рост нагрузки:
+![grafanametrics.png](lab-part8/grafanametrics.png)
+в определенный момент тротлинг достиг 100% 💀💀💀
+
+
+осталось добавить алерты, запросы для них почти те же самые, выставляю везде порог 80% и pending period 1 минуту:
+![defaultfriday.png](lab-part8/defaultfriday.png)
+
+Что значат эти алерты и чем они грозят?
+- алерт на memory ловит потребление памяти свыше 80% от лимита контейнера (128mb), грозит OOM
+- алерт на cpu usage ловит потребление процессорного времени свыше 80% от лимита контейнера (0.5), грозит тротлингом и фризами
+- алерт на cpu throttling ловит тротлинг (доля throttled_periods к periods_total) свыше 80%, может выглядеть здоровым, но фризить и отвечать "рвано"
+
