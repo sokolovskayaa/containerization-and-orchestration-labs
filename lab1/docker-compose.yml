@@ -1,0 +1,39 @@
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lab1-api
+    ports:
+      - "127.0.0.1:5000:5000"
+    mem_limit: 128m
+    cpus: 0.5
+    pids_limit: 32
+
+  cadvisor:
+    image: ghcr.io/google/cadvisor:0.55.1
+    container_name: lab1-cadvisor
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+  prometheus:
+    image: prom/prometheus:v3.13.4
+    container_name: lab1-prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+  grafana:
+    image: grafana/grafana:12.4.0
+    container_name: lab1-grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - prometheus
