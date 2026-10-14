@@ -1,0 +1,19 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm' version '2.3.21'
+    id 'application'
+}
+
+group = 'devops'
+version = '0.1.0'
+
+repositories {
+    mavenCentral()
+}
+
+kotlin {
+    jvmToolchain(25)
+}
+
+application {
+    mainClass = 'devops.lab4.BatchApplicationKt'
+}
