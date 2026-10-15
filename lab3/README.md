@@ -2,10 +2,12 @@
 
 https://github.com/KeladKaal/containerization-and-orchestration/blob/main-rus/lecture-3-kubernetes-control-plane/lab.md
 
+Кратенькое содержимое:
+
 Кластер: kind `shop` (1 control-plane + 2 worker), конфиг в `kind-config.yaml`.
 Образы: `make images` собирает `api`/`worker` и загружает их в ноды.
 
-## Как развернуть с нуля
+## Кратенькая сборочка
 
 Нужны Docker, kind, helm и kubectl. Все команды выполняются из папки `lab3/`.
 
@@ -190,19 +192,54 @@ pattern:
 
 ## Часть 2: Чарт api и worker
 
+На этом мои мучения только начинались. Если я думал, что понимаю как работает кубер - я ошибался
+
 Чарт лежит в `chart/shop/`.
 
 ### Что в чарте
 
-_✍️ Напиши: какие файлы в чарте и зачем каждый (Chart.yaml, values.yaml, 4 шаблона). Что вынесено в values (replicas, image, limits, healthFail) и зачем. Что заложено в шаблоны под правила Части 1 (реестр, тег, limits, метка app)._
+Удивительная штука под названию Helm из под капота, делает за нас довольно много рутины. 
+
+Коротко, из чего состоит чарт:
+
+`Chart.yaml` там метаданные чарта, имя и версия
+
+`values.yaml` там сидят значения, которые меняем: api.replicas: 3
+
+И еще у нас есть удивительная папка под названием `/templates` и туда мы помещаем все YAML-манифесты,  только изменяемые значения в них заменены на подстановки
+
+Идея, в том чтобы писать наши изменяемые значения один раз в 
+`values.yaml` и уже в каждый шаблон, кое требует это значение
+подставлять `{{ .Values.field... }}` и Helm при upgrate,install просто возьмет
+подставит в наши шаблоны наши значение и напрямую отправит их API-Server
+
+Но помимо этого он умеет еще и откатывать версии.
+
+Каждый install и каждый upgrade Helm записывает как ревизию 
+и хранит её прямо в кластере
+
+типо того:
+
+`sh.helm.release.v1.shop.v1, ...v2`
+
 
 ### Установка: Kyverno не пускает плохой чарт
 
 ![Kyverno отклонил чарт с чужим образом](screenshots/helm_kyverno_denied.png)
 
-_✍️ Напиши: что подменили через `--set` и что ответил Kyverno. Кто кого спросил: Helm → API-сервер → Kyverno._
+После того, как Kyverno был поставлен на стражу порядка в API-Server
+из-за того, что стоят 5 политик, и cloudNativePG при установке не удовлетворял 3 из них
+его пришлось исключить через namespace в этих политиках,
+а потом еще и перенести образ Postgres в мой реестр. 
 
-Чистая установка:
+```YAML
+exclude:
+  any:
+  - resources:
+      namespaces: ["cnpg-system", "local-path-storage"]
+```
+
+Ну и затем, все поднялось и начало работать
 
 ![helm upgrade --install](screenshots/helm_install.png)
 
@@ -210,36 +247,100 @@ _✍️ Напиши: что подменили через `--set` и что о�
 
 ### Пробы
 
-_✍️ Напиши: чем readiness отличается от liveness, что делает каждая при провале, кто их выполняет (kubelet)._
+Я проверил развёрнутый чарт через helm get manifest: вписал их в Deployment 
+
+`kubectl describe pod -n shop -l app=api | grep -E "Liveness|Readiness"`
+
+![Пробы на подах api](screenshots/probes_describe.png)
+
+Пробы работают в сценарии со сломанной версией. При HEALTH_FAIL=true новые поды не
+проходят readiness, поэтому rollout зависает, а старые поды не удаляются.
+Этот сценарий описывается в разделе про rollback.
 
 ### Reconciliation: удалил под
 
+далее тестил то, как работает удаление пода
+
+попробовал удалить под в replicaset
+
 ![Удаляем под](screenshots/pod_delete.png)
+
+Параллельно в другом окне запустил 
+
+`kubectl get pods -n shop -w`
+
+И он тут же создал новый
+Replicaset-controller (часть controller-manager)
+тут же увидела, что их стало на один меньше
+и желаемый результат не совпадает с фактическим
+Поэтому отправила запрос на создание новой поды API-Server с префиксом
+имени (имя + хеш содержимого (`template:` + непоставленные поля))
+хвост API-Server сгерировал сам, записал в таблицу etcd
+и затем уже Scheduler выбирал ноду для пода, и kubelet запустил наш новый под
 
 ![Под вернулся](screenshots/pod_recreated.png)
 
-_✍️ Напиши: кто вернул под (какой контроллер) и почему у нового пода другое имя._
-
 ### Reconciliation: replicas в values
+
+Дальше шел экспримент скейлинга наших подов и я стокнулся с тем, что оказывается
+изменяя replicas новый replicaset (это только потом я уже понял что новая replicaset
+создается ток при изменении template или при явном rollout restart - к слову
+эта делает довольно простую но не очевидную вещь, дописывая в template
+аннотацию `kubectl.kubernetes.io/restartedAt: <время>`) 
+
 
 ![replicas: 5 в values.yaml](screenshots/values_replicas5.png)
 
+Далее мы через helm посылаем API-Server запрос на
+изменённый Deployment с spec.replicas: 5
+
 ![helm upgrade, ReplicaSet DESIRED 5](screenshots/helm_upgrade_replicas.png)
+
+Таким образом, при изменениии Deployment:
+
+deployment-controller следит за Deployment
+когда в Deployment меняется replicas, 
+он меняет replicas в ReplicaSet api-7bc878dcff с 3 на 5.
+
+Дальше replicaset-controller, смотрит 
+на то сколько реплик мы хотим получить и создаёт через API-сервер
+2 объекта Pod. У этих подов ещё не указана нода, поле nodeName пустое.
+
+Дальше уже подписанный schuduler смотрит какие ноды дать под поды
+
+и наш kubelet просто запускает наши поды и приводит их в Ready
 
 ![Появились 2 новых пода](screenshots/scale_pods.png)
 
-_✍️ Напиши: почему ReplicaSet остался тот же (где лежит replicas). Цепочка от helm upgrade до пода._
-
 ### Ручной kubectl scale и конфликт с Helm
+
+Дальше кстати было интереснее, ведь возник конфликт с kubectl
+Я попытался увеличить число реплик через консольную утилиту кубера, и в след раз
+сделал изменение снова через helm upgrade, но мне отказали с ошибкой
 
 ```
 Error: UPGRADE FAILED: conflict occurred while applying object shop/api apps/v1, Kind=Deployment:
 Apply failed with 1 conflict: conflict with "kubectl" with subresource "scale" using apps/v1: .spec.replicas
 ```
+Как я понял, когда Helm посылает API-Server он еще и следит за тем, 
+кто владеет каждым отдельным полем.
 
-_✍️ Напиши: почему Helm не вернул 5 реплик сам. Почему следующий upgrade упал (владельцы полей, Update против Apply). Что делает `--force-conflicts`._
+Грубо говоря
+
+Helm upgrade делает операцию Apply и он становится владельцем Helm
+Дальше, kubectl scale делает операцию Update. И так работает, 
+что при Update он ничего не проверяет и просто приписывает владение себе
+Еще раз Helm upgrade делает операцию Apply и мы ловим ошибку, потому что у нас
+нет прав менять поле, которое закреплено под другим владельцем
+
+Поэтому пришлось сделать --force-conflicts, чтобы он не проверял владельца
 
 ### Rolling update: первая попытка
+
+После этого поднял версию образа api с 1.0.0 до 1.0.1 в values.yaml 
+и сделал helm upgrade, параллельно долбя /health в цикле.
+Поменялся template, поэтому появился новый ReplicaSet api-67d654f8c5, 
+и поды заменялись на новую версию по одному (RollingUpdate), а не все сразу.
 
 ![ReplicaSet-ы во время rolling update: начало](screenshots/rolling_rs_1.png)
 
@@ -249,9 +350,29 @@ _✍️ Напиши: почему Helm не вернул 5 реплик сам.
 
 ![Ошибки во время rolling update, fail=6](screenshots/rolling_fail.png)
 
-_✍️ Напиши: почему поды менялись по одному (maxSurge/maxUnavailable). Откуда взялись 6 ошибок (SIGTERM против обновления EndpointSlice/kube-proxy)._
+У Deployment есть два поля
+
+maxSurge: 25%         сколько подов можно создать сверх replicas
+
+сколько подов можно создать сверх 3. 0,75 округляется вверх, получается 1.
+Значит, одновременно может существовать максимум 3 + 1 = 4 пода.
+
+maxUnavailable: 25%   сколько подов может быть не Ready
+
+0,75 округляется вниз, получается 0. 
+Значит, Ready всегда должно быть минимум 3 − 0 = 3 пода.
 
 ### Rolling update: после preStop
+
+Дальше я попробовал такую штуку как preStop
+
+Идея в том, чтоб повесить перед удалением пода какие-то действия
+
+sleep - kubelet просто ждёт заданное время.
+exec — любая команда внутри контейнера.
+httpGet — HTTP-запрос.
+
+Я повесил sleep 5 seconds
 
 ![ReplicaSet-ы: 1.0.2 → 1.0.3](screenshots/rolling_ok_rs.png)
 
@@ -283,7 +404,11 @@ _✍️ Напиши 2–3 вывода: Helm не следит за класт�
 
 ### Выбор оператора
 
-_✍️ Напиши: почему CloudNativePG, а не Zalando. Что такое оператор: CRD (новый тип `Cluster`) + контроллер (под, который следит за этим типом). Зачем он, если Postgres можно запустить StatefulSet-ом (failover, репликация, бэкапы, пароли)._
+Снова по совету великой нейронки я взял CloudNativePG, и стал разбираться с тем, как он работает
+Во-первых, этот оператор-программа, по факту делающая работу контроллера,
+работает с определенным типом CRD новый тип `Cluster` и контроллер, как раз следит ток за этим типом
+И когда мы создаем объект Cluster наш CloudNativePG-pod подписан на наш API-Server и если таблица 
+Cluster была изменена, то CloudNativePG будет с ней работать
 
 ### Установка оператора и Kyverno
 
