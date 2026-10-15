@@ -10,6 +10,12 @@ spec:
       - resources:
           kinds:
           - Pod
+    exclude:                      # кроме системных namespace: оператор CloudNativePG и провижинер дисков kind
+      any:
+      - resources:
+          namespaces:
+          - cnpg-system
+          - local-path-storage
     validate:
       failureAction: Enforce      # Enforce = отклонять; Audit = пропустить, но записать в отчёт
       message: "Лейблы не указаны: задай metadata.labels.app для каждого контейнера"

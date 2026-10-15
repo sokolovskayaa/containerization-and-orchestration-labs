@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: worker
+  name: worker
+spec:
+  replicas: {{ .Values.worker.replicas }}
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+      - image: {{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag }}
+        name: worker
+        ports:
+        - containerPort: 8080
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          periodSeconds: 5
+          failureThreshold: 2
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          periodSeconds: 5
+          failureThreshold: 5
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: postgres-app
+              key: uri
+        resources:
+          limits:
+            cpu: {{ .Values.worker.resources.limits.cpu }}
+            memory: {{ .Values.worker.resources.limits.memory }}
