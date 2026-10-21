@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: batch
+  name: batch
+spec:
+  replicas: {{ .Values.batch.replicas }}
+  selector:
+    matchLabels:
+      app: batch
+  template:
+    metadata:
+      labels:
+        app: batch
+    spec:
+      containers:
+      - image: {{ .Values.batch.image.repository }}:{{ .Values.batch.image.tag }}
+        name: batch
+        env:
+        - name: MEMORY_MB
+          value: {{ .Values.batch.memoryMb | quote }}
+        - name: CPU_WORKERS
+          value: {{ .Values.batch.cpuWorkers | quote }}
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xmx{{ .Values.batch.javaMaxHeap }}"
+        resources:
+          requests:
+            cpu: {{ .Values.batch.resources.requests.cpu }}
+            memory: {{ .Values.batch.resources.requests.memory }}
+          limits:
+            cpu: {{ .Values.batch.resources.limits.cpu }}
+            memory: {{ .Values.batch.resources.limits.memory }}

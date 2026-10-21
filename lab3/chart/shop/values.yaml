@@ -1,3 +1,9 @@
+scheduling:
+  mechanism: topologySpreadConstraints
+  topologyKey: kubernetes.io/hostname
+  maxSkew: 1
+  whenUnsatisfiable: DoNotSchedule
+  nodeTaintsPolicy: Honor
 api:
   replicas: 3
   healthFail: "false"
@@ -17,6 +23,21 @@ worker:
     limits:
       cpu: "250m"
       memory: "128Mi"
+batch:
+  replicas: 1
+  image:
+    repository: registry.shop.local/batch
+    tag: "0.1.0"
+  memoryMb: 128
+  cpuWorkers: 1
+  javaMaxHeap: "256m"
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "64Mi"
+    limits:
+      cpu: "1000m"
+      memory: "384Mi"
 postgres:
   instances: 1
   image:

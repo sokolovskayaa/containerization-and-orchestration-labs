@@ -16,6 +16,7 @@ spec:
           namespaces:
           - cnpg-system
           - local-path-storage
+          - monitoring
     validate:
       failureAction: Enforce      # Enforce = отклонять; Audit = пропустить, но записать в отчёт
       message: "Лейблы не указаны: задай metadata.labels.app для каждого контейнера"

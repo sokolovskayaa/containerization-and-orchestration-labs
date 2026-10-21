@@ -14,6 +14,24 @@ spec:
       labels:
         app: api
     spec:
+      {{ if eq .Values.scheduling.mechanism "topologySpreadConstraints" }}
+      topologySpreadConstraints:
+      - maxSkew: {{ .Values.scheduling.maxSkew }}
+        topologyKey: {{ .Values.scheduling.topologyKey }}
+        whenUnsatisfiable: {{ .Values.scheduling.whenUnsatisfiable }}
+        nodeTaintsPolicy: {{ .Values.scheduling.nodeTaintsPolicy }}
+        labelSelector:
+          matchLabels:
+            app: api
+      {{ else if eq .Values.scheduling.mechanism "podAntiAffinity" }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: api
+            topologyKey: {{ .Values.scheduling.topologyKey }}
+      {{ end }}
       containers:
       - image: {{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}
         name: api
