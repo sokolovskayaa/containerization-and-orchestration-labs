@@ -1,0 +1,46 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: shop-api-ingress
+spec:
+  podSelector:
+    matchLabels:
+{{ toYaml .Values.networkPolicy.selectors.api | indent 6 }}
+
+  policyTypes:
+    - Ingress
+
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+{{ toYaml .Values.networkPolicy.selectors.client | indent 14 }}
+
+      ports:
+        - protocol: TCP
+          port: {{ .Values.networkPolicy.ports.api }}
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: shop-client-egress
+spec:
+  podSelector:
+    matchLabels:
+{{ toYaml .Values.networkPolicy.selectors.client | indent 6 }}
+
+  policyTypes:
+    - Egress
+
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+{{ toYaml .Values.networkPolicy.selectors.api | indent 14 }}
+
+      ports:
+        - protocol: TCP
+          port: {{ .Values.networkPolicy.ports.api }}
+{{- end }}

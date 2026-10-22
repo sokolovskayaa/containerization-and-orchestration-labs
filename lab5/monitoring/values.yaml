@@ -1,0 +1,56 @@
+# Лёгкая конфигурация для kind
+
+defaultRules:
+  create: false
+
+kubeStateMetrics:
+  enabled: false
+
+nodeExporter:
+  enabled: false
+
+kubelet:
+  enabled: false
+
+kubeApiServer:
+  enabled: false
+
+kubeControllerManager:
+  enabled: false
+
+kubeScheduler:
+  enabled: false
+
+kubeEtcd:
+  enabled: false
+
+kubeProxy:
+  enabled: false
+
+coreDns:
+  enabled: false
+
+prometheus:
+  prometheusSpec:
+    retention: 6h
+
+    serviceMonitorSelector:
+      matchLabels:
+        release: monitoring
+    serviceMonitorNamespaceSelector: {}
+
+    podMonitorSelector:
+      matchLabels:
+        release: monitoring
+    podMonitorNamespaceSelector: {}
+
+    ruleSelector:
+      matchLabels:
+        release: monitoring
+    ruleNamespaceSelector: {}
+
+grafana:
+  enabled: true
+
+alertmanager:
+  enabled: true

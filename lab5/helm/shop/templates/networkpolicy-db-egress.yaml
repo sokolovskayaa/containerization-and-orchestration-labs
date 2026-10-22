@@ -1,0 +1,26 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- range $role := list "api" "worker" }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: shop-{{ $role }}-db-egress
+spec:
+  podSelector:
+    matchLabels:
+{{ toYaml (index $.Values.networkPolicy.selectors $role) | indent 6 }}
+
+  policyTypes:
+    - Egress
+
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+{{ toYaml $.Values.networkPolicy.selectors.postgres | indent 14 }}
+
+      ports:
+        - protocol: TCP
+          port: {{ $.Values.networkPolicy.ports.postgres }}
+{{- end }}
+{{- end }}

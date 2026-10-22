@@ -1,0 +1,62 @@
+api:
+  replicas: 3
+  image: shop-api:v2
+  port: 8080
+  nodePort: 30080
+
+worker:
+  replicas: 2
+  image: shop-worker:v1
+
+postgres:
+  name: shop-postgres
+  image: ghcr.io/cloudnative-pg/postgresql:16-minimal-trixie
+  instances: 1
+  storage: 1Gi
+  database: shopdb
+  user: shop
+  password: "lab-password-only"
+
+networkPolicy:
+  enabled: true
+
+  selectors:
+    api:
+      app: api
+    worker:
+      app: worker
+    postgres:
+      cnpg.io/cluster: shop-postgres
+    client:
+      run: load-client
+
+  dns:
+    namespace: kube-system
+    labels:
+      k8s-app: kube-dns
+    port: 53
+
+  operator:
+    namespace: cnpg-system
+    labels:
+      app.kubernetes.io/name: cloudnative-pg
+
+  ports:
+    api: 8080
+    postgres: 5432
+    cnpgManagement: 8000
+
+monitoring:
+  enabled: true
+  release: monitoring
+  namespace: monitoring
+
+  prometheusPodLabels:
+    app.kubernetes.io/name: prometheus
+
+  apiMetricsPort: 9090
+  postgresMetricsPort: 9187
+
+  alerts:
+    apiDownFor: 1m
+    dnsFailuresFor: 1m

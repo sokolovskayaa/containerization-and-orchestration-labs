@@ -1,0 +1,16 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: shop-api-metrics
+  labels:
+    app: shop-api-metrics
+spec:
+  type: ClusterIP
+  selector:
+    app: api
+  ports:
+    - name: metrics
+      port: {{ .Values.monitoring.apiMetricsPort }}
+      targetPort: metrics
+{{- end }}

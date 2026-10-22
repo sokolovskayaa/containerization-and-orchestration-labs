@@ -1,0 +1,42 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: shop-postgres-ingress
+spec:
+  podSelector:
+    matchLabels:
+{{ toYaml .Values.networkPolicy.selectors.postgres | indent 6 }}
+
+  policyTypes:
+    - Ingress
+
+  ingress:
+    # Доступ приложения к PostgreSQL
+    - from:
+        - podSelector:
+            matchLabels:
+{{ toYaml .Values.networkPolicy.selectors.api | indent 14 }}
+        - podSelector:
+            matchLabels:
+{{ toYaml .Values.networkPolicy.selectors.worker | indent 14 }}
+
+      ports:
+        - protocol: TCP
+          port: {{ .Values.networkPolicy.ports.postgres }}
+
+    # Управление через CloudNativePG Operator
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.networkPolicy.operator.namespace | quote }}
+          podSelector:
+            matchLabels:
+{{ toYaml .Values.networkPolicy.operator.labels | indent 14 }}
+
+      ports:
+        - protocol: TCP
+          port: {{ .Values.networkPolicy.ports.cnpgManagement }}
+        - protocol: TCP
+          port: {{ .Values.networkPolicy.ports.postgres }}
+{{- end }}

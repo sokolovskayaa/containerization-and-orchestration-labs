@@ -1,0 +1,4 @@
+networkPolicy:
+  selectors:
+    api:
+      app: api-broken

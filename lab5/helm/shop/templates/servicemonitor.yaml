@@ -1,0 +1,16 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: shop-api
+  labels:
+    release: {{ .Values.monitoring.release }}
+spec:
+  selector:
+    matchLabels:
+      app: shop-api-metrics
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 15s
+{{- end }}

@@ -1,0 +1,10 @@
+source,destination,expected,observed,result
+client,shop-api.shop.svc.cluster.local:80,allow,allow,PASS
+api,shop-postgres-rw.shop.svc.cluster.local:5432,allow,allow,PASS
+worker,shop-postgres-rw.shop.svc.cluster.local:5432,allow,allow,PASS
+client,10.244.2.54:5432,deny,deny,PASS
+outsider,10.244.2.54:5432,deny,deny,PASS
+outsider,10.244.2.128:8080,deny,deny,PASS
+worker,10.244.2.128:8080,deny,deny,PASS
+api,10.244.1.226:8080,deny,deny,PASS
+postgres,10.244.2.128:8080,deny,deny,PASS

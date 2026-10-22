@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shop-api
+spec:
+  replicas: {{ .Values.api.replicas }}
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      terminationGracePeriodSeconds: 20
+
+      containers:
+        - name: api
+          image: {{ .Values.api.image | quote }}
+          imagePullPolicy: Never
+
+          ports:
+            - name: http
+              containerPort: {{ .Values.api.port }}
+            - name: metrics
+              containerPort: {{ .Values.monitoring.apiMetricsPort }}
+
+          env:
+            - name: PGHOST
+              value: "{{ .Values.postgres.name }}-rw"
+            - name: PGPORT
+              value: "5432"
+            - name: PGDATABASE
+              value: {{ .Values.postgres.database | quote }}
+            - name: PGSSLMODE
+              value: "require"
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: shop-db-auth
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: shop-db-auth
+                  key: password
+
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            periodSeconds: 3
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi

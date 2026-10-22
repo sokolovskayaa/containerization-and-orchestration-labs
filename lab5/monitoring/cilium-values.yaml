@@ -1,0 +1,19 @@
+prometheus:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    labels:
+      release: monitoring
+
+hubble:
+  metrics:
+    enabled:
+      - drop
+      - flow
+      - tcp
+      - dns
+
+    serviceMonitor:
+      enabled: true
+      labels:
+        release: monitoring

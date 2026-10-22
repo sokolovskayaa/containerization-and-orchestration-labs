@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shop-worker
+spec:
+  replicas: {{ .Values.worker.replicas }}
+
+  selector:
+    matchLabels:
+      app: worker
+
+  template:
+    metadata:
+      labels:
+        app: worker
+
+    spec:
+      containers:
+        - name: worker
+          image: {{ .Values.worker.image | quote }}
+          imagePullPolicy: Never
+
+          env:
+            - name: PGHOST
+              value: "{{ .Values.postgres.name }}-rw"
+            - name: PGPORT
+              value: "5432"
+            - name: PGDATABASE
+              value: {{ .Values.postgres.database | quote }}
+            - name: PGSSLMODE
+              value: "require"
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: shop-db-auth
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: shop-db-auth
+                  key: password
+
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi

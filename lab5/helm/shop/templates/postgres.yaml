@@ -1,0 +1,31 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ .Values.postgres.name }}
+spec:
+  instances: {{ .Values.postgres.instances }}
+
+  imageName: {{ .Values.postgres.image | quote }}
+
+  storage:
+    size: {{ .Values.postgres.storage }}
+
+  bootstrap:
+    initdb:
+      database: {{ .Values.postgres.database }}
+      owner: {{ .Values.postgres.user }}
+      secret:
+        name: shop-db-auth
+
+      postInitApplicationSQL:
+        - |
+          CREATE TABLE IF NOT EXISTS public.orders (
+            id BIGSERIAL PRIMARY KEY,
+            status TEXT NOT NULL DEFAULT 'new'
+          );
+        - |
+          GRANT SELECT, INSERT, UPDATE
+          ON TABLE public.orders TO shop;
+        - |
+          GRANT USAGE, SELECT
+          ON SEQUENCE public.orders_id_seq TO shop;

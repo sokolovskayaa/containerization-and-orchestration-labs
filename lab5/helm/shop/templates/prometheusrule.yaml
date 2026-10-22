@@ -1,0 +1,54 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: shop-alerts
+  labels:
+    release: {{ .Values.monitoring.release }}
+spec:
+  groups:
+    - name: shop.rules
+      rules:
+        - alert: ShopAPIDown
+          expr: |
+            (
+              sum(up{
+                namespace="shop",
+                service="shop-api-metrics"
+              }) or vector(0)
+            ) < 1
+          for: {{ .Values.monitoring.alerts.apiDownFor }}
+          labels:
+            severity: critical
+          annotations:
+            summary: "All shop API targets are unavailable"
+            description: "Prometheus cannot scrape any shop API instance"
+
+        - alert: ShopPolicyDrops
+          expr: |
+            sum(increase(
+              hubble_drop_total{
+                reason="POLICY_DENIED"
+              }[2m]
+            )) > 0
+          for: 0m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Cilium is denying network traffic"
+            description: "Network policy drops detected"
+
+        - alert: ShopDNSFailures
+          expr: |
+            sum(increase(
+              hubble_dns_responses_total{
+                rcode!~"NOERROR|No Error|NO_ERROR|0|"
+              }[5m]
+            )) > 0
+          for: {{ .Values.monitoring.alerts.dnsFailuresFor }}
+          labels:
+            severity: warning
+          annotations:
+            summary: "DNS failures detected"
+            description: "Hubble observed unsuccessful DNS responses"
+{{- end }}

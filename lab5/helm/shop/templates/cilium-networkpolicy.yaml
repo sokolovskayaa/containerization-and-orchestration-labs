@@ -1,0 +1,35 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: shop-postgres-apiserver
+spec:
+  endpointSelector:
+    matchLabels:
+{{ toYaml .Values.networkPolicy.selectors.postgres | indent 6 }}
+
+  egress:
+    - toEntities:
+        - kube-apiserver
+
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: shop-external-api
+spec:
+  endpointSelector:
+    matchLabels:
+{{ toYaml .Values.networkPolicy.selectors.api | indent 6 }}
+
+  ingress:
+    - fromEntities:
+        - world
+        - host
+        - remote-node
+
+      toPorts:
+        - ports:
+            - port: {{ .Values.networkPolicy.ports.api | quote }}
+              protocol: TCP
+{{- end }}
