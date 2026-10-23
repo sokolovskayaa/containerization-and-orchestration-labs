@@ -1,0 +1,31 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: api
+  labels:
+    release: monitoring       
+spec:
+  groups:
+    - name: shop
+      rules:
+        - alert: ApiDown
+          expr: up{job="api"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Под {{ "{{" }} $labels.pod {{ "}}" }} не отвечает"
+        - alert: ApiHigh5xxErrors
+          expr: increase(shop_http_requests_total{status=~"5.."}[5m]) > 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Под {{ "{{" }} $labels.pod {{ "}}" }} отдаёт 5xx на {{ "{{" }} $labels.path {{ "}}" }}"
+        - alert: ShopPodRestarting
+          expr: increase(kube_pod_container_status_restarts_total{namespace="shop"}[10m]) > 2
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Под {{ "{{" }} $labels.pod {{ "}}" }} перезапускается слишком часто"
