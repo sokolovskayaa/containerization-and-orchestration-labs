@@ -1,0 +1,5 @@
+apiVersion: v2
+name: shop
+description: Магазин shop (api,worker)
+version: 0.1.0 #версия чарта
+appVersion: "1.0.0" #версия приложения

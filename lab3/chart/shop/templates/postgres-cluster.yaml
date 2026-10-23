@@ -1,0 +1,16 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres
+spec:
+  instances: {{ .Values.postgres.instances }}
+  imageName: {{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}
+  storage:
+    size: {{ .Values.postgres.storage.size }}
+  resources:
+    limits:
+      cpu: {{ .Values.postgres.resources.limits.cpu }}
+      memory: {{ .Values.postgres.resources.limits.memory }}
+  inheritedMetadata:
+    labels:
+      app: postgres
