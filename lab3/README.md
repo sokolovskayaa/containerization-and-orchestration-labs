@@ -372,7 +372,7 @@ sleep - kubelet просто ждёт заданное время.
 exec — любая команда внутри контейнера.
 httpGet — HTTP-запрос.
 
-Я повесил sleep 5 seconds
+Я повесил sleep 5 seconds и перед SIGTERM удалением kubelet сначала выполняет preStop и ждет 5 секунд, параллельно IP пода исчезает из iptables, и ток по исчению 5 секунд он вызовет SIGTERM и как я понял, если бы я поставил 35 секунд, а terminationGracePeriodSeconds стоит 30 - SIGKILL сработает раньше чем preStop завершит свое выполнение, поэтому надо учитывать это, когда выполняем что-то в preStop ( время выполнения preStop должно быть меньше, чем   terminationGracePeriodSeconds, так как preStop sleep входит в terminationGracePeriodSeconds )
 
 ![ReplicaSet-ы: 1.0.2 → 1.0.3](screenshots/rolling_ok_rs.png)
 
@@ -380,25 +380,30 @@ httpGet — HTTP-запрос.
 
 ![Итог: fail=0](screenshots/rolling_ok_total.png)
 
-_✍️ Напиши: что делает `preStop: sleep 5` и почему первый upgrade с preStop ещё не защищал._
-
 ### Сломанная версия и rollback
+
+Дальше выставил api переменную HEALTH_FAIL=true и сделал helm upgrade. Появился новый ReplicaSet api-6fd86dc68c и один новый под.
 
 ![Новый под 0/1, рестарты, CrashLoopBackOff](screenshots/broken_pods.png)
 
 ![События пода: readiness и liveness 503](screenshots/broken_events.png)
 
+Как и ожидалось новый под отвечал на /health кодом 503.
+
+Поэтому не проходила readiness проба, и под так и не стал Ready. 
+
+Liveness не проходила и поэтому kubelet перезапускал контейнер, пока тот не ушёл в CrashLoopBackOff.
+
+Каак мы видим 
 ![Нагрузка: отвечают только старые поды, fail=0](screenshots/broken_load.png)
+
+Из-за maxUnavailable = 0 контроллер Deployment не может удалить старый под, пока новый не станет Ready. 
 
 ![rollout завис, а Helm пишет deployed](screenshots/broken_rollout_stuck.png)
 
+Поэтому тупо rollout остановился на 1 out of 3.
+
 ![helm rollback](screenshots/rollback.png)
-
-_✍️ Напиши: почему rollout завис и сервис при этом работал (Ready → deployment-controller и EndpointSlice). Почему Helm пишет `deployed`. Почему rollback не пересоздал поды._
-
-### Итоги Части 2
-
-_✍️ Напиши 2–3 вывода: Helm не следит за кластером (drift), во время rolling update работают две версии сразу, без `--wait` Helm не знает, работает ли приложение._
 
 ## Часть 3: Postgres через оператора
 
@@ -406,13 +411,19 @@ _✍️ Напиши 2–3 вывода: Helm не следит за класт�
 
 Снова по совету великой нейронки я взял CloudNativePG, и стал разбираться с тем, как он работает
 Во-первых, этот оператор-программа, по факту делающая работу контроллера,
-работает с определенным типом CRD новый тип `Cluster` и контроллер, как раз следит ток за этим типом
+работает с новым типом `Cluster`, который добавлен в k8s через CRD, и контроллер, как раз следит за этим типом
 И когда мы создаем объект Cluster наш CloudNativePG-pod подписан на наш API-Server и если таблица 
 Cluster была изменена, то CloudNativePG будет с ней работать
 
 ### Установка оператора и Kyverno
 
-Первая попытка установить оператор:
+Первая попытка установить оператор не увенчалась успехом, когда я запустил 
+
+`helm repo add cnpg https://cloudnative-pg.github.io/charts`
+
+`helm install cnpg cnpg/cloudnative-pg -n cnpg-system --create-namespace --version 0.29.1 --wait`
+
+ничего не сработало, потому что снова не прошло политики
 
 ```
 Error: server-side apply failed for object cnpg-system/cnpg-cloudnative-pg apps/v1, Kind=Deployment:
@@ -422,7 +433,9 @@ require-limits:   autogen-only-shop-limits   ... /spec/template/spec/containers/
 trusted-registry: autogen-only-shop-registry ... /spec/template/spec/containers/0/image/
 ```
 
-Когда Postgres попросил диск, Kyverno заблокировал служебный под провижинера дисков kind:
+добавил исключение, переустановил, оператор поднялся
+
+И тут возникает 2 проблема: когда Postgres попросил диск, Kyverno заблокировал служебный под провижинера дисков kind:
 
 ```
 failed to provision volume with StorageClass "standard":
@@ -430,46 +443,462 @@ resource Pod/local-path-storage/helper-pod-create-pvc-... was blocked due to the
 require-labels, require-limits, trusted-registry
 ```
 
-_✍️ Напиши: почему исключили `cnpg-system` и `local-path-storage` только из трёх политик, а не из пяти (privileged и latest продолжают действовать). Чем это лучше, чем подгонять оператор под правила._
+Проблема в том, что Postgres создаёт PVC (запрос на диск). Провижинер дисков kind на него реагирует и запускает временный под, который создаёт на ноде папку под этот диск. Вот только под принадлежит kind, а не мне, поэтому его зарубили те же три политики. А без пода нету диска, поэтому postgres не стартует. Добавил в исключение в `require-limits.yaml`
+
+```yaml
+namespaces:
+    cnpg-system
+    local-path-storage
+```
+
+И оно запустилось 
 
 ### Postgres в чарте
 
-_✍️ Напиши: что в шаблоне `postgres-cluster.yaml` и как Postgres проходит все пять политик без исключений (образ скопирован в `registry.shop.local`, limits, метка `app` через `inheritedMetadata`). Почему пришлось пересобрать образ через `FROM` для `kind load`._
+мы пишем свой шаблончик `postgres-cluster.yaml`
+
+в которой описываем объект кластера
+
+```yaml
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres
+spec:
+  instances: {{ .Values.postgres.instances }}
+  imageName: {{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}
+  storage:
+    size: {{ .Values.postgres.storage.size }}
+  resources:
+    limits:
+      cpu: {{ .Values.postgres.resources.limits.cpu }}
+      memory: {{ .Values.postgres.resources.limits.memory }}
+  inheritedMetadata:
+    labels:
+      app: postgres
+```
+
+Поды, PVC и Service создаёт уже оператор. 
 
 ![Под postgres-1 и его диск](screenshots/pg_pods_pvc.png)
 
+под с бд запустился, и диск тоже создался и привязался к поду ( status Bound )
+
 ### api и worker работают с базой
 
-_✍️ Напиши: откуда api и worker берут `DATABASE_URL` (Secret `postgres-app`, который создал оператор, `secretKeyRef`). Почему пароля нет ни в чарте, ни в git._
+тестим работу /order и /orders
 
 ![POST /order: заказ создан](screenshots/pg_order_create.png)
 
 ![GET /orders: worker обработал заказ](screenshots/pg_orders_processed.png)
 
+Оператор сам генерит пароль и собирает полную строку подключения
+
+Он кладёт её в Secret с именем postgres-app а внутри как раз находится нужное нам поле uri, а Secret хранится в etcd. Это описано в документации оператора CloudNativePG
+
+Ну и чтобы наш api обратился к поду с бд  `api-deployment.yaml` как раз описывает как называется secret и какой ключ в него помещаем.
+
+```yaml
+ env:
+ - name: DATABASE_URL
+    valueFrom:
+    secretKeyRef:
+        name: postgres-app
+        key: uri
+```
+
+При запуске пода kubelet берёт значение из Secret и передаёт его в контейнер как переменную DATABASE_URL
+
 ### Reconciliation: удалил под Postgres
+
+Дальше я удалил под postgres с помощью
+
+`kubectl delete pod postgres-1 -n shop`
+
+
 
 ![Под postgres-1 удалён и вернулся с тем же именем](screenshots/pg_pod_recreated.png)
 
-![Хозяин пода — Cluster, заказ на месте](screenshots/pg_after_delete.png)
+![Хозяин пода - Cluster, заказ на месте](screenshots/pg_after_delete.png)
 
-_✍️ Напиши: кто вернул под (оператор, хозяин `Cluster`, ReplicaSet нет). Почему имя то же (`postgres-1` ↔ PVC `postgres-1`). Почему заказ пережил удаление._
+Оператор сам управляем нашим объектом кластера, replicaset не знает о них
+
+Он сам создает поды и связывает под с именем диска, поэтому имя одно и тоже 
 
 ### spec и status
+
+дальше я посмотрел как выглядит спека 
 
 ![spec объекта Cluster (1)](screenshots/pg_cluster_spec_1.png)
 
 ![spec объекта Cluster (2)](screenshots/pg_cluster_spec_2.png)
 
+Помимо полей, которые мы написали в spec, в объекте появились значения по умолчанию. Часть подставил api-server из схемы CRD, остальное дописал webhook оператора при создании объекта
+
 ![status объекта Cluster (1)](screenshots/pg_cluster_status_1.png)
 
 ![status объекта Cluster (2)](screenshots/pg_cluster_status_2.png)
 
-_✍️ Напиши: что в `spec` (желаемое, пишем мы, плюс значения по умолчанию от оператора) и что в `status` (фактическое, пишет оператор: `phase`, `currentPrimary`, `readyInstances`)._
+статус - это фактическое состояние и там видно, сколько, например, у нас сейчас запущено готовых инстансов
+
+оператор просто сравнивает значение спеки с реальностью,проводит махинации, а отчет пишет в status
 
 ### Оператор против controller-manager
 
-_✍️ Напиши: где работает каждый (kube-system и часть Kubernetes против обычного пода в cnpg-system, поставленного нами). За чем следит (встроенные Deployment/ReplicaSet против нового типа `Cluster`). Что общего (один и тот же цикл: watch → сравнить spec с реальностью → исправить → записать status). Что оператор знает про Postgres такого, чего не знает ReplicaSet._
+Если сравнивать оператор и controller-manager,
+controller-manager часть кубера, а оператор это обычный отдельный под в своем namespace, который не является его частью. Оператор следит ток за своим типом (Cluster), а controller-manager за своими встроенными типами Deployment, ReplicaSet. Ну spec и status у них работает одинаково и оба работают по одному циклу: сравнивают spec с реальностью и исправляют расхождение.
+Если говорить конкретно про Postgre, то там оператор еще и знает, кто главный и у кого какой диск, в отличие от ReplicaSet, который дает тебе одинаковые поды, которые ничем не отличаются
 
 ## Часть 4: Падение control plane
 
+### Выключаем etcd
+
+Вроде, казалось бы, достаточно убить просто под с etcd и все сработает, но проблема в том что когда мы пишем 
+
+`kubectl delete pod etcd-shop-control-plane`
+
+это не сам под а его копия
+
+kubelet дает копию API-server для публикации информации, поэтому удалив его kubelet просто увидит что ее нету в apiServer и даст новую
+а etcd будет жить 
+
+Причина этому статические поды. ectd работает с самого создания кластера. Они подключаются через yaml файлики в `/etc/kubernetes/manifests` а kubelet следит за этими статик подами и если файлик исчезает kubelet просто не запустит ее заново 
+
+
+но тут возникает идея давайте просто, чтобы убить именно оригинал идем в обход API-server сразу в containerd и стопаем его через `crictl stop`, НО:
+
+kubelet следит за этими статик подами и если один из них падает kubelet просто его перезапустит
+
+Поэтому нужны радикальные меры - mv
+
+перемещаем наш файлик etcd.yaml в другую директорию и kubelet видит, что файла нет, и сам останавливает контейнер
+
+![etcd.yaml вынесен из manifests](screenshots/cp_etcd_stop.png)
+
+![crictl ps: контейнера etcd больше нет](screenshots/cp_etcd_gone.png)
+
+и etcd пропадает
+
+### Доступ к api мимо API-сервера
+
+Так как etcd стопнулась, API-server пошел за ней ( всё хранится в etcd, поэтому без etcd он не может ответить ни на один запрос ) и его liveness проба не проходит, и kubelet перезапускает его по кругу 
+
+Теперь чтобы достучаться до api port-forward не подходит. Он ходит через API-сервер, а API-сервер упал вместе с etcd.
+
+А curl с ноды на ClusterIP работает: маршрут до подов уже лежит в iptables на ноде, etcd не нужен.
+
+### Управление сломалось
+
+kubectl ловит таймаут: API-сервер принимает соединение, но молчит, потому что ждёт etcd
+
+![kubectl: таймаут](screenshots/cp_kubectl_timeout.png)
+
+helm upgrade висит 
+
+![helm upgrade висит](screenshots/cp_helm_hang.png)
+
+![helm upgrade: cluster unreachable](screenshots/cp_helm_unreachable.png)
+
+### Приложение продолжает работать
+
+Но поды живы
+
+![Цикл /health: начало](screenshots/cp_loop_start.png)
+
+и наши api и worker отвечают
+
+![etcd лежит, api и worker отвечают](screenshots/cp_loop_ok.png)
+
+![POST /order при лежащем etcd](screenshots/cp_order_create.png)
+
+Поскольку весь трафик идёт через iptables, пароль к Postgres api получил при старте. 
+
+В etcd лежит описание кластера, а заказы лежат в Postgres.
+
+![Заказ etcd-down обработан worker-ом](screenshots/cp_orders_processed.png)
+
+### Возвращаем control plane
+
+А теперь вернем etcd.yaml
+обратно
+
+![etcd.yaml возвращён в manifests](screenshots/cp_etcd_restore.png)
+
+И видим что etcd поднялся, но api сервера еще нет
+
+Почему?
+
+Потому что как я уже сказал, пока etcd лежал, kubelet убил api сервер много раз, и пауза после след рестарта растет удваиваясь до 5 минут. И мы вынуждены ждать когда kubelet в след раз дойдет до рестарта api сервера
+
+![etcd поднялся, API-сервера ещё нет](screenshots/cp_etcd_running.png)
+
+паузы между рестартами и есть CrashLoopBackOff
+
+![API-сервер: ATTEMPT 6 Exited, ATTEMPT 7 Running](screenshots/cp_apiserver_backoff.png)
+
+Все ноды снова и поды снова можно посмотреть
+
+![Ноды Ready](screenshots/cp_nodes_ready.png)
+
+![Поды shop те же, без новых рестартов](screenshots/cp_pods_survived.png)
+
+
+### Кластер снова управляем
+
+И тут можно стокнутся с еще одной проблемой Kyverno не отвечает.
+
+На самом деле проблема в том, что API-сервер лежал, поэтому Kyverno сломался (он живет за счет API-server и без него не может работать), kubelet его перезапускал, и он тоже ушёл в паузу CrashLoopBackOff.
+
+![Первый helm upgrade: Kyverno ещё не поднялся](screenshots/cp_kyverno_refused.png)
+
+Поэтому подождав немного он тоже заработал
+
+![helm upgrade прошёл, REVISION 22](screenshots/cp_helm_ok.png)
+
+![Удалённые поды api вернулись с новыми именами](screenshots/cp_pods_recreated.png)
+
 ## Часть 5: Мониторинг
+
+И тут при установке prometheus снова сработали две политики, снова добавляем исключение monitoring в exclude
+
+![Kyverno отклонил установку kube-prometheus-stack](screenshots/mon_kyverno_denied.png)
+
+применяем
+
+![Политики с monitoring в exclude применены](screenshots/mon_policies_apply.png)
+
+и вуаля, наш monitoring запущен
+
+![helm upgrade --install monitoring прошёл](screenshots/mon_helm_install.png)
+
+![Поды в namespace monitoring](screenshots/mon_pods.png)
+
+дальше копируем файл из 2 лабы в чарт shop
+
+и рефакторим файлик
+
+```YAML
+metadata:
+  name: {{ include "api.fullname" . }}            
+  labels:
+    {{- include "api.labels" . | nindent 4 }}  
+    release: monitoring                           
+spec:
+  selector:
+    matchLabels:
+      {{- include "api.selectorLabels" . | nindent 6 }}   
+```
+
+
+### ServiceMonitor: Prometheus видит api
+
+И вот наконец-то мы добрались до сбора метрик
+
+ServiceMonitor здесь - это инструкция для Prometheus: откуда вообще надо собирать метрики
+
+без нее он не знает, где наш api
+и Prometheus оператор как раз берет только те объекты, у которых есть метка "release: monitoring"
+
+поэтому, если мы ее не поставим, ServiceMonitor просто не появится в prometheus 
+
+matchLabels просто ищет Service с меткой app:api
+
+ну и дальше идут endpoints: как часто забирать,
+по какому адресу находятся
+
+после отправки наших файликов через helm upgrade 
+спустя время у нас в prometheus появились метрики подов
+
+![3 пода api в статусе UP](screenshots/mon_api_targets_up.png)
+
+### Красные таргеты control plane
+
+К слову, таргеты control plane сидят вообще в DOWN
+
+связано это с тем, что они по умолчанию отдают метрики ток на локальный айпи 127.0.0.1, то есть только тому, кто сидит на той же ноде. 
+
+Prometheus же работает в отдельном поде и приходит по IP ноды, поэтому у нас возникает connection refused
+
+![etcd и controller-manager DOWN: connection refused](screenshots/mon_targets_cp_down.png)
+
+### Подбираем запросы для алертов
+
+Используем простой алерт `up{job="api"}`
+
+![up{job="api"}: 3 пода, у всех 1](screenshots/mon_query_up.png)
+
+и видим, что вывелись все поды, потому что мы не отфильтровали на живых и мертвых
+
+поэтому проверяем, мертвы ли поды или нет `up{job="api"} == 0`
+
+![ApiDown: up == 0 — пусто, все поды живы](screenshots/mon_query_apidown.png)
+
+Нет ничего — все поды живы, и это нормально
+
+Затем делаем 2-й и 3-й алерты, которые проверяют пятисотки за последние 5 минут и рестарты больше 2 за последние 10 минут
+
+![ApiHigh5xxErrors: 5xx за 5 минут — пусто](screenshots/mon_query_5xx.png)
+
+![ShopPodRestarting: рестарты за 10 минут — пусто](screenshots/mon_query_restarts.png)
+
+Неудивительно, что все пока что хорошо 
+
+### PrometheusRule в чарте
+
+Создаем правило для prometheus
+
+это правило тоже подгоняет нам Prometheus Operator при labels `release: monitoring`
+
+Сначала мы делаем helm upgrade, далее это все берет оператор и отправляет в объект кубера ConfigMap
+и уже kubelet копирует наш файл в сам под Prometheus, где Prometheus перечитывает его
+
+
+`chart/shop/templates/api-prometheusrule.yaml`:
+
+```YAML
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: api
+  labels:
+    release: monitoring
+spec:
+  groups:
+    - name: shop
+      rules:
+        - alert: ApiDown
+          expr: up{job="api"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Под {{ "{{" }} $labels.pod {{ "}}" }} не отвечает"
+        - alert: ApiHigh5xxErrors
+          expr: increase(shop_http_requests_total{status=~"5.."}[5m]) > 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Под {{ "{{" }} $labels.pod {{ "}}" }} отдаёт 5xx на {{ "{{" }} $labels.path {{ "}}" }}"
+        - alert: ShopPodRestarting
+          expr: increase(kube_pod_container_status_restarts_total{namespace="shop"}[10m]) > 2
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Под {{ "{{" }} $labels.pod {{ "}}" }} перезапускается слишком часто" 
+```
+
+`for: 2m` говорит о том, сколько надо жить нашему алерту, чтобы улететь в firing (до этого будет висеть в `pending`) 
+
+поставил 2 минуты, чтобы понапрасну не тревожить человека из-за rolling update, например :)
+
+`summary: "Под {{ "{{" }} $labels.pod {{ "}}" }} перезапускается слишком часто"` имеет `{{ "{{" }}`, потому что иначе Helm попробует обработать это значение, а нам нужно, чтобы это сделал Prometheus
+
+### Почему я выбрал эти алерты
+
+#### ApiDown — `up{job="api"} == 0`
+
+просто проверяет на живность наши поды
+
+Под, который не отвечает, не обслуживает заказы. 
+
+Пока подов 3, сервис ещё работает на оставшихся, но запас прочности уменьшился: если упадёт ещё один, нагрузка ляжет на последний.
+
+Лучше узнать об этом сразу, а не когда упадут все.
+
+#### ApiHigh5xxErrors — `increase(...[5m]) > 0`
+
+проверяет, насколько счетчик вырос за последние N минут (просто в Prometheus счетчик идет постоянно и он никогда не уменьшается, а только растет, поэтому используем `increase(...[5m])`, которая проверяет, насколько вырос счетчик за ПОСЛЕДНИЕ 5 минут)
+и если количество таких пятисоток у нас больше 0, алерт срабатывает
+`increase(shop_http_requests_total{status=~"5.."}[5m]) > 0`
+
+Зачем?
+
+500 видят живые пользователи: заказ не оформился, страница сломалась. 
+
+При этом под может быть живым и всё равно отдавать ошибки, например если упала база.
+
+#### ShopPodRestarting — `increase(...[10m]) > 2`
+
+по факту делает то же самое, только сравнивает счетчик рестартов наших подов и если за последние 10 минут их было больше 2 — что-то идет не так
+
+Под, который постоянно перезапускается, снаружи может выглядеть нормально: Kubernetes его поднимает, и сервис как будто работает. 
+
+но по факту не хватает памяти, падает приложение, не проходит проба. Поэтому поставил максимум 2 перезапуска, ибо 3-5 перезапусков за 10 минут выглядит странновато 
+
+![Правила shop в Prometheus: expr, for, summary](screenshots/mon_alerts_rules.png)
+
+![Все 3 алерта inactive](screenshots/mon_alerts_inactive.png)
+
+Все наши алерты проходят и все отлично. Причем эти алерты появились не сразу, а ток через несколько минут, потому что по цепочке проходит довольно много времени, ведь kubelet синхронизирует ConfigMap в поды примерно раз в минуту
+
+### Проверка: ломаем api
+
+Поехали! Дальше ломаем api 
+
+я включил healthFail, чтобы наш health_check намеренно ломался
+
+и что произошло
+
+Новый под api начал отвечать 500 на /health
+А это значит, что liveness постоянно будет его перезапускать, но 3 старых пода живут и принимают запросы
+
+а Service не посылает на 0/1 новый с CrashLoopBackOff контейнер, потому что он не готов и не прошел readiness пробу
+
+Итого:
+
+ApiHigh5xxErrors: kubelet дёргает /health пробами, получает 500, и счётчик пятисоток растёт
+
+ShopPodRestarting: liveness перезапускает под больше 2 раз за 10 минут
+
+ApiDown: пока контейнер мёртв между перезапусками, Prometheus не может забрать /metrics, и up = 0.
+
+В pending он улетает, когда наш алерт живет меньше чем 2 минуты из `for: 2m`
+Поэтому, как только 2 минуты прошли, он стал FIRING
+
+![ApiHigh5xxErrors и ShopPodRestarting в pending](screenshots/mon_alerts_pending.png)
+
+![FIRING: ShopPodRestarting и ApiHigh5xxErrors, ApiDown в pending](screenshots/mon_alerts_firing.png)
+
+чиним, `helm upgrade shop . -n shop` (убираем healthFail) и готово:
+
+К слову, пока чинил:
+
+у Helm есть неочевидное правило. 
+
+Если при helm upgrade не передать ни одного --set и ни одного -f, Helm берёт значения из прошлой ревизии, а не из values.yaml
+
+Поэтому мне пришлось явно сделать `--reset-values`, чтобы сбросить healthFail:true
+
+```bash
+
+❯ helm upgrade shop . -n shop --reset-values
+
+Release "shop" has been upgraded. Happy Helming!
+NAME: shop
+LAST DEPLOYED: Sat Oct 24 00:58:05 2026
+NAMESPACE: shop
+STATUS: deployed
+REVISION: 32
+DESCRIPTION: Upgrade complete
+TEST SUITE: None
+
+lab3/chart/shop on  lab3part2-3 [!?] ☸ kind-shop
+❯ helm get values shop -n shop
+USER-SUPPLIED VALUES:
+null
+
+```
+
+Как итог:
+
+![Finally](screenshots/finally.png)
+
+
+### Happy end
+
+это было тяжело, но мы справились с этим зверем под названием кубернетес
+
+![Cat: The end](screenshots/rofls.jpg)
+
