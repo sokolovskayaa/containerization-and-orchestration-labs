@@ -1,0 +1,656 @@
+{
+  "name": "AI observability engineer",
+  "nodes": [
+    {
+      "parameters": {
+        "owner": {
+          "__rl": true,
+          "value": "adamada1725",
+          "mode": "list",
+          "cachedResultName": "adamada1725",
+          "cachedResultUrl": "https://github.com/adamada1725"
+        },
+        "repository": {
+          "__rl": true,
+          "value": "lexica",
+          "mode": "list",
+          "cachedResultName": "lexica",
+          "cachedResultUrl": "https://github.com/adamada1725/lexica"
+        },
+        "events": [
+          "pull_request"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.githubTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "743c2294-6140-4f15-92e2-c210e5f0b969",
+      "name": "Github Trigger",
+      "webhookId": "bf07abf1-49b1-4f71-991e-61bee3a83eee",
+      "credentials": {
+        "githubApi": {
+          "id": "cowKCFOERPLHpzLr",
+          "name": "GitHub account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -176,
+        176
+      ],
+      "id": "88799c74-65e6-4278-bdeb-1c22ea0c021e",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst prs = $input.all();\n\nreturn prs\n  .map(item => item.json)\n  .filter(pr =>\n    pr.state === 'open' &&\n    !pr.head.ref.endsWith('-AI-observability') &&\n    !pr.draft\n  )\n  .map(pr => ({\n    json: {\n      pr_number: pr.number,\n      repository: pr.head.repo.full_name,\n      title: pr.title,\n      base_branch: pr.base.ref,\n      head_branch: pr.head.ref,\n      head_sha: pr.head.sha,\n      ai_branch: `${pr.number}-AI-observability`,\n      pr_url: pr.html_url\n    }\n  }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        272,
+        0
+      ],
+      "id": "2c80f170-bb8e-4d26-9a5b-6159408e0ab7",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "resource": "repository",
+        "operation": "getPullRequests",
+        "owner": {
+          "__rl": true,
+          "value": "adamada1725",
+          "mode": "list",
+          "cachedResultName": "adamada1725",
+          "cachedResultUrl": "https://github.com/adamada1725"
+        },
+        "repository": {
+          "__rl": true,
+          "value": "lexica",
+          "mode": "list",
+          "cachedResultName": "lexica",
+          "cachedResultUrl": "https://github.com/adamada1725/lexica"
+        },
+        "getRepositoryPullRequestsFilters": {}
+      },
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        176
+      ],
+      "id": "604bc9b9-bb05-4f9d-8052-99f52dc60c55",
+      "name": "Get pull requests of a repository",
+      "webhookId": "86b13c25-25e0-4d12-a1f3-dcfcf22cf7b1",
+      "credentials": {
+        "githubApi": {
+          "id": "cowKCFOERPLHpzLr",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a senior SRE (Site Reliability Engineer)\nreviewing observability gaps in pull requests.\n\nYour objective is NOT to add metrics to new code.\nYour objective is to identify operational risks\nthat cannot be adequately observed.\n\nFollow these steps:\n\n1. Inspect the actual PR diff and relevant surrounding code.\n2. Classify changes:\n   - Production runtime behavior\n   - Background production jobs\n   - Offline tools / CLI / build-time utilities\n   - Tests / documentation / configuration\n3. Inspect existing instrumentation and monitoring.\n4. Identify concrete operational blind spots.\n5. Recommend changes ONLY when they are operationally justified.\n\nFor offline tools, CI/CD jobs and one-time scripts:\nDo not propose application-level Prometheus metrics\nunless there is explicit evidence of a recurring\nproduction monitoring requirement and a viable\ncollection mechanism.\n\nNever assume that a process runs periodically,\nis production-critical, or lacks monitoring\nwithout evidence.\n\nA new class, function, service or subsystem\ndoes not by itself justify new metrics.\n\nIf existing monitoring is sufficient,\nreturn changes_required=false with empty arrays.\n\nIf repository inspection fails, report an\nanalysis error rather than concluding that\nno changes are needed.\n\nRepository: {{ $json.repository }}\n\nPull Request: #{{ $json.pr_number }}\n\nSource branch: {{ $json.head_branch }}\n\nCommit SHA: {{ $json.head_sha }}\n\nYour task:\n1. Analyze changes introduced by this pull request.\n2. Identify new application functionality that needs monitoring.\n3. Check whether relevant Prometheus metrics already exist.\n4. Recommend missing counters, gauges or histograms.\n5. Suggest appropriate Grafana dashboard panels.\n\nRules:\n- Do not modify files or create pull requests yet.\n- Do not suggest metrics that already exist.\n- Avoid high-cardinality labels.\n- Only suggest metrics justified by actual code changes.\n- Explain where each metric should be instrumented.\n- If no new metrics are necessary, explicitly say so.\n\n\nOBSERVABILITY DECISION POLICY\n\nYour primary goal is to identify meaningful observability gaps,\nNOT to maximize the number of metrics.\n\nDefault decision: changes_required = false.\n\nRecommend new Prometheus metrics only when:\n1. The code introduces or substantially changes an operationally\n   significant runtime behavior.\n2. The behavior is executed in a persistent service or a\n   frequently scheduled production job.\n3. Existing metrics, logs, traces, and infrastructure monitoring\n   cannot adequately cover the operational question.\n4. The metric leads to a concrete operational decision or alert.\n\nDo NOT recommend custom Prometheus metrics for:\n- Documentation or configuration-only changes.\n- One-time scripts, migrations or offline data builders.\n- Rarely executed CLI utilities.\n- Information already available through CI/CD monitoring.\n- Internal functions simply because they are new.\n- Metrics without a clear operational purpose.\n\nBefore recommending any metric, explain:\n- What operational problem does it detect?\n- Who would act on it?\n- Why are existing monitoring tools insufficient?\n- How will the metric be collected in production?\n\nIf these questions cannot be answered convincingly,\nreturn changes_required = false, metrics = [], dashboards = [].\n\nNever create dashboards for metrics that cannot actually\nbe collected by the existing infrastructure.\n",
+        "hasOutputParser": true,
+        "needsFallback": true,
+        "options": {
+          "maxIterations": 25
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        736,
+        0
+      ],
+      "id": "4c757610-2719-4374-ade3-71aa83dfe59a",
+      "name": "AI Agent",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.1-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        784,
+        400
+      ],
+      "id": "84022dfc-2054-428c-83a7-e7d048a6733b",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "brznt2499e4hbcV9",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "endpointUrl": "https://api.githubcopilot.com/mcp/",
+        "authentication": "multipleHeadersAuth",
+        "include": "selected",
+        "includeTools": [
+          "pull_request_read",
+          "issue_read",
+          "projects_list"
+        ],
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.4,
+      "position": [
+        880,
+        400
+      ],
+      "id": "145d8203-8957-413e-83c8-f387ca69a327",
+      "name": "GitHub MCP",
+      "credentials": {
+        "httpMultipleHeadersAuth": {
+          "id": "ZLzKkDIhybV6fwme",
+          "name": "Multiple Headers Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"changes_required\": true,\n  \"reason\": \"Обоснование\",\n  \"metrics\": [\n    {\n      \"name\": \"metric name\",\n      \"description\": \"metric description\"\n    }\n  ],\n  \"dashboards\": [\n    {\n      \"name\": \"dashboard name\",\n      \"description\": \"dashboard description\"\n    }\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        928,
+        224
+      ],
+      "id": "7a5b77f3-1d81-4cd1-b4c5-9ccdc689e168",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        496,
+        0
+      ],
+      "id": "71e065cc-3402-42c5-ac82-def046182167",
+      "name": "Limit"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        736,
+        224
+      ],
+      "id": "f3987990-5dcc-4fd1-894a-deba8a54e26d",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "20f86oXkIAq9AXS3",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "896be4b8-2a8f-4fab-b3fd-ed2c48263f94",
+              "leftValue": "={{ $json['output']['changes_required'] }}",
+              "rightValue": "false",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1248,
+        0
+      ],
+      "id": "f4ba7ed5-1a6d-47c7-8adb-38249e02e0e1",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "resource": "pullRequest",
+        "operation": "createComment",
+        "pullRequestNumber": "={{ $('Code in JavaScript').item.json.pr_number }}",
+        "body": "=### Observability Review — No Changes Required\n\n**Status:** No additional instrumentation needed.\n\nThe AI Observability Agent has reviewed this pull request and determined that no new Prometheus metrics or Grafana dashboards are currently required.\n\n**Analysis**\n\n{{ $json.reason }}\n\n**Result**\n- Prometheus metrics: No changes required\n- Grafana dashboards: No changes required\n- Additional observability PR: Not created\n\n---\n*Automated review by AI Observability Engineer. This assessment is advisory and does not replace manual review.*",
+        "owner": {
+          "__rl": true,
+          "value": "adamada1725",
+          "mode": "list",
+          "cachedResultName": "adamada1725",
+          "cachedResultUrl": "https://github.com/adamada1725"
+        },
+        "repository": {
+          "__rl": true,
+          "value": "lexica",
+          "mode": "list",
+          "cachedResultName": "lexica",
+          "cachedResultUrl": "https://github.com/adamada1725/lexica"
+        }
+      },
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1.1,
+      "position": [
+        1584,
+        144
+      ],
+      "id": "e20e6646-1ca1-462d-a0d6-0dcad76d8f98",
+      "name": "Create a comment on a pull request",
+      "webhookId": "9a7bb605-8932-4201-965b-82ec381c2eba",
+      "credentials": {
+        "githubApi": {
+          "id": "cowKCFOERPLHpzLr",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const original = $(\"Limit\").first().json;\nconst existing = $input.all()\n  .map(item => item.json)\n  .find(pr => pr.number && pr.state === 'open');\n\nreturn [{\n  json: {\n    ...original,\n    ai_branch: `${original.pr_number}-AI-observability`,\n    ai_pr_exists: Boolean(existing),\n    ai_pr_number: existing?.number ?? null\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1584,
+        -96
+      ],
+      "id": "3cc8bc05-a006-4b71-af58-e28ed633806f",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "77f1a09c-cec3-4dbe-88c2-f76d2a3965b8",
+              "leftValue": "={{ $json.ai_pr_exists }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1808,
+        -96
+      ],
+      "id": "5e5e65b0-4b03-49be-8853-b7cf40aa62da",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are the implementation agent for AI Observability.\n\nRepository:\n{{ $json.repository }}\n\nOriginal Pull Request:\n#{{ $json.pr_number }}\n\nSource branch:\n{{ $json.head_branch }}\n\nAI branch:\n{{ $json.ai_branch }}\n\nThe observability reviewer has already analyzed this PR.\n\nRequired changes:\n{{ JSON.stringify($json.metrics) }}\n\nRequired dashboards:\n{{ JSON.stringify($json.dashboards) }}\n\nReason:\n{{ $json.rea }}\n\nYour task:\n\n1. Inspect the current code on the AI branch.\n2. Implement the required Prometheus instrumentation.\n3. Do not modify unrelated functionality.\n4. Create Grafana dashboard JSON files for the new metrics.\n5. Follow the repository's existing observability conventions.\n6. Check existing metrics before creating duplicates.\n7. Run relevant tests and validation.\n8. Return a summary of files changed and validation results.\n\nDo not create another Pull Request.\nDo not create another branch.\nModify only the current AI observability branch.\n\nFor every dashboard in the required dashboards list:\n\n1. Create a valid Grafana dashboard JSON file.\n2. Store it in:\n   grafana/dashboards/ai-observability/\n\n3. The dashboard must:\n   - use Prometheus as its datasource;\n   - contain panels for the metrics actually implemented;\n   - use valid PromQL queries;\n   - have a meaningful title and panel descriptions;\n   - contain no invented metrics.\n\n4. The dashboard JSON must be valid and importable by Grafana.\n\n5. After creating the file, commit it to the current AI observability branch.\n\nDo not merely describe the dashboard in your response.\nThe dashboard JSON must exist as an actual file in the repository.",
+        "options": {
+          "maxIterations": 25
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2320,
+        -112
+      ],
+      "id": "fe3364f7-ed65-4516-a3e5-118280c9c78a",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.1-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        2320,
+        80
+      ],
+      "id": "c0692dca-23fd-4849-917f-75620b3d6fdd",
+      "name": "Google Gemini Chat Model2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "brznt2499e4hbcV9",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "endpointUrl": "https://api.githubcopilot.com/mcp/",
+        "authentication": "multipleHeadersAuth",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.4,
+      "position": [
+        2464,
+        80
+      ],
+      "id": "612885ae-372f-422e-96d9-61d6345ebdb9",
+      "name": "GitHub MCP1",
+      "credentials": {
+        "httpMultipleHeadersAuth": {
+          "id": "ZLzKkDIhybV6fwme",
+          "name": "Multiple Headers Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.github.com/repos/adamada1725/lexica/git/refs",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"ref\": \"refs/heads/{{ $json.ai_branch }}\",\n  \"sha\": \"{{ $json.head_sha }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2064,
+        -16
+      ],
+      "id": "23738ae7-3523-400f-a0d6-f13f6777a48a",
+      "name": "HTTP Request",
+      "credentials": {
+        "githubApi": {
+          "id": "cowKCFOERPLHpzLr",
+          "name": "GitHub account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "AI Agent": [
+      {
+        "json": {
+          "output": {
+            "changes_required": true,
+            "reason": "The PR introduces a test-only router that measures the duration of a random sleep and records it in a new gauge (lexica_test_gauge). This functionality is intended for development/testing and is not part of production runtime behavior. Consequently, there is no operational risk that requires additional observability, and the added metric does not address a production monitoring need. Existing monitoring remains sufficient.",
+            "metrics": [],
+            "dashboards": [
+              {
+                "name": "test gauge",
+                "description": "implement simple gauge dashboard"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "Code in JavaScript1": [
+      {
+        "json": {
+          "pr_number": 161,
+          "repository": "adamada1725/lexica",
+          "title": "test router",
+          "base_branch": "develop",
+          "head_branch": "test_tg_router",
+          "head_sha": "9157a93f527db08c183466be6203ccd99cff1518",
+          "ai_branch": "161-AI-observability",
+          "pr_url": "https://github.com/adamada1725/lexica/pull/161",
+          "ai_pr_exists": true,
+          "ai_pr_number": 162
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Github Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get pull requests of a repository",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get pull requests of a repository": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "GitHub MCP": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create a comment on a pull request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GitHub MCP1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "89b60d3a-89ef-4c8b-940b-640c73591c1c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "db0a18bf10e5a21d943907c269c84515a133deeef0b2818a14970d0b23669e59"
+  },
+  "nodeGroups": [],
+  "id": "5fYVwuk15TLQbisZ",
+  "tags": []
+}
