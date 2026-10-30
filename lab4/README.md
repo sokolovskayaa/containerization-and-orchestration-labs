@@ -464,15 +464,19 @@ http_req_duration..: avg=44.3ms  p(90)=101.91ms  p(95)=129.01ms  max=230.59ms
 
 ## Часть 5 — приоритеты, QoS и PDB
 
-[Отчёт с фактическими результатами](PART5.md). Helm shop, ревизия 36:
-**deployed**. API и PostgreSQL — Guaranteed с приоритетом 100000;
-batch — Burstable с приоритетом -1000. Все поды Ready.
+[Итоговый отчёт](PART5.md). Проверено в **shop-lab4 на двух нодах**:
+Helm shop revision 3 deployed, все поды Ready. API и PostgreSQL — Guaranteed
+с приоритетом 100000, batch — Burstable с приоритетом -1000; PDB действуют.
 
-API использует requests=limits 100m/100Mi: CPU поднят с рекомендации krr 10m
-после проблем холодного старта и таймаутов под нагрузкой. Для PostgreSQL
-сохранены прежние ресурсы: krr его не обнаружил. Эти ограничения описаны
-в отчёте. Проверка через Service: 150 заказов, 150 ответов 201, p95=52.78ms.
-Preemption и SLA под дефицитом ресурсов пока не проверены.
+KRR с [адаптером обнаружения CNPG](krr-cnpg/README.md) получил числовые
+рекомендации PostgreSQL. Память базы — 137Mi. CPU-пороги обоснованы проверками
+запуска и нагрузки и явно заданы в KRR. Итоговые значения в
+values-part5-final.yaml сгенерированы из сохранённых JSON-отчётов.
+Короткая итоговая проверка: **300/300 заказов, 0 ошибок, p95=31.25ms**.
+История KRR ограничена; проверку не следует считать доказательством SLA
+под дефицитом ресурсов. Preemption и eviction пока не проводились.
+
+Старый shop сохранён и остановлен; текущий контекст — kind-shop-lab4.
 
 ### Batch: сборка и включение
 
@@ -486,7 +490,7 @@ limits 1000m/512Mi). Параметры MEMORY_MB и CPU_WORKERS задаютс�
 ```bash
 docker build -f lab4/services/batch/Dockerfile.standalone -t registry.shop.local/batch:0.1.0 lab4/services/batch
 kind load docker-image registry.shop.local/batch:0.1.0 --name shop
-helm upgrade shop lab3/chart/shop -n shop -f lab4/values-part5-krr.yaml -f lab4/values-batch.yaml --wait --timeout 3m
+helm upgrade shop lab3/chart/shop -n shop -f lab4/values-part5-final.yaml --wait --timeout 3m
 ```
 
 Автоматизированный вариант для context kind-shop:

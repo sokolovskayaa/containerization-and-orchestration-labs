@@ -70,3 +70,15 @@ API 10m не выдержал проверку: зарегистрированы
 получил MaxRAMPercentage=70.0; PostgreSQL остался 250m/512Mi. Ревизия Helm 36
 deployed. Через Service успешно созданы 150 из 150 заказов. Это корректировка
 исходной рекомендации, а не новый результат krr. Итог: [PART5.md](../../PART5.md).
+
+
+## Финальная проверка на двух нодах
+
+Ограничение обнаружения CNPG закрыто локальным расширением discovery KRR
+без изменения алгоритмов расчёта: patch и upstream commit в krr-cnpg/.
+Сырой результат PostgreSQL: 26m/137Mi. Финальные policy-отчёты
+deployments-final.json и postgres-final.json задают явные CPU floors
+100m (API/worker) и 250m (PostgreSQL), обоснованные проверками. Итоговые
+ресурсы получены генератором derive-part5-values.py. На новом shop-lab4
+из двух нод: все поды Ready, Guaranteed критического пути, Burstable batch.
+300/300 заказов через Service, p95=31.25ms. См. ../../PART5.md.

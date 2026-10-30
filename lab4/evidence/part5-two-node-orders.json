@@ -1,0 +1,26 @@
+{
+  "target": "http://api.shop.svc.cluster.local/order",
+  "requests": 150,
+  "success_201": 147,
+  "failed": 3,
+  "elapsed_seconds": 32.66515972299999,
+  "rate_target": 5.0,
+  "p95_success_ms": 3101.929792999954,
+  "errors": [
+    {
+      "status": 503,
+      "duration_ms": 3089.3427099999826,
+      "error": "HTTP Error 503: SERVICE UNAVAILABLE"
+    },
+    {
+      "status": 503,
+      "duration_ms": 3108.3767930001613,
+      "error": "HTTP Error 503: SERVICE UNAVAILABLE"
+    },
+    {
+      "status": 503,
+      "duration_ms": 3106.3757930000975,
+      "error": "HTTP Error 503: SERVICE UNAVAILABLE"
+    }
+  ]
+}

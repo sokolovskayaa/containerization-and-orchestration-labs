@@ -1,0 +1,64 @@
+COMPUTED VALUES:
+api:
+  healthFail: "false"
+  image:
+    repository: registry.shop.local/api
+    tag: 1.0.3
+  pdb:
+    minAvailable: 1
+  replicas: 3
+  resources:
+    limits:
+      cpu: 100m
+      memory: 100Mi
+    requests:
+      cpu: 100m
+      memory: 100Mi
+batch:
+  cpuWorkers: 1
+  enabled: true
+  image:
+    repository: registry.shop.local/batch
+    tag: 0.1.0
+  javaToolOptions: -XX:MaxRAMPercentage=70.0
+  memoryMb: 128
+  replicas: 1
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+postgres:
+  image:
+    repository: registry.shop.local/postgresql
+    tag: 18.6-system-trixie
+  instances: 1
+  pdb:
+    minAvailable: 1
+  resources:
+    limits:
+      cpu: 250m
+      memory: 137Mi
+    requests:
+      cpu: 250m
+      memory: 137Mi
+  storage:
+    size: 1Gi
+protection:
+  batchPriority: -1000
+  criticalPriority: 100000
+  enabled: true
+worker:
+  image:
+    repository: registry.shop.local/worker
+    tag: 1.0.0
+  replicas: 2
+  resources:
+    limits:
+      cpu: 250m
+      memory: 100Mi
+    requests:
+      cpu: 100m
+      memory: 100Mi

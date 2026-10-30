@@ -1,0 +1,10 @@
+{
+  "target": "http://api.shop.svc.cluster.local/order",
+  "requests": 300,
+  "success_201": 300,
+  "failed": 0,
+  "elapsed_seconds": 60.16476690299987,
+  "rate_target": 5.0,
+  "p95_success_ms": 2076.3353760003156,
+  "errors": []
+}
