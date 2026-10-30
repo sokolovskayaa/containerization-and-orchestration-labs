@@ -1,0 +1,3 @@
+NAME                      STATUS   ROLES           AGE   VERSION   INTERNAL-IP   EXTERNAL-IP   OS-IMAGE                       KERNEL-VERSION            CONTAINER-RUNTIME
+shop-lab4-control-plane   Ready    control-plane   14m   v1.37.0   172.19.0.6    <none>        Debian GNU/Linux 13 (trixie)   7.0.12-linuxkit (arm64)   containerd://2.3.4
+shop-lab4-worker          Ready    <none>          14m   v1.37.0   172.19.0.5    <none>        Debian GNU/Linux 13 (trixie)   7.0.12-linuxkit (arm64)   containerd://2.3.4

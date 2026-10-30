@@ -1,0 +1,2 @@
+[pod/batch-6c6b77fb7-xdbqf/batch] Exception in thread "main" java.lang.OutOfMemoryError: Java heap space
+[pod/batch-6c6b77fb7-xdbqf/batch] 	at Batch.main(Batch.java:10)

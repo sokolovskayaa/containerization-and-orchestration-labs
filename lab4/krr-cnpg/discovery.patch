@@ -1,0 +1,98 @@
+diff --git a/robusta_krr/core/integrations/kubernetes/__init__.py b/robusta_krr/core/integrations/kubernetes/__init__.py
+index 0ede135..02badde 100644
+--- a/robusta_krr/core/integrations/kubernetes/__init__.py
++++ b/robusta_krr/core/integrations/kubernetes/__init__.py
+@@ -12,6 +12,7 @@ from kubernetes.client.models import (
+     V1DaemonSet,
+     V1Deployment,
+     V1Job,
++    V1LabelSelector,
+     V1Pod,
+     V1PodList,
+     V1StatefulSet,
+@@ -111,6 +112,7 @@ class ClusterLoader:
+             self._list_deployments(),
+             self._list_rollouts(),
+             self._list_strimzipodsets(),
++            self._list_cloudnativepg(),
+             self._list_deploymentconfig(),
+             self._list_all_statefulsets(),
+             self._list_all_daemon_set(),
+@@ -406,7 +408,7 @@ class ClusterLoader:
+ 
+                 result.extend(self.__build_scannable_object(item, container, kind) for container in containers)
+         except ApiException as e:
+-            if kind in ("Rollout", "DeploymentConfig", "StrimziPodSet") and e.status in [400, 401, 403, 404]:
++            if kind in ("Rollout", "DeploymentConfig", "StrimziPodSet", "CloudNativePG") and e.status in [400, 401, 403, 404]:
+                 if self.__kind_available[kind]:
+                     logger.debug(f"{kind} API not available in {self.cluster}")
+                 self.__kind_available[kind] = False
+@@ -471,6 +473,41 @@ class ClusterLoader:
+             extract_containers=_extract_containers,
+         )
+ 
++    def _list_cloudnativepg(self) -> list[K8sObjectData]:
++        """Read-only CNPG discovery; resource usage is still computed by KRR."""
++        async def _extract_containers(item: Any) -> list[V1Container]:
++            # CNPG creates Pods directly. Build a local selector, never mutate the CR.
++            item.spec.selector = V1LabelSelector(match_labels={"cnpg.io/cluster": item.metadata.name})
++            loop = asyncio.get_running_loop()
++            pods = await loop.run_in_executor(
++                self.executor,
++                lambda: self.core.list_namespaced_pod(
++                    namespace=item.metadata.namespace,
++                    label_selector=f"cnpg.io/cluster={item.metadata.name}",
++                ),
++            )
++            containers = {}
++            for pod in pods.items:
++                if pod.metadata.deletion_timestamp is None:
++                    for container in pod.spec.containers:
++                        containers[container.name] = container
++            return list(containers.values())
++
++        return self._list_scannable_objects(
++            kind="CloudNativePG",
++            all_namespaces_request=lambda **kwargs: ObjectLikeDict(
++                self.custom_objects.list_cluster_custom_object(
++                    group="postgresql.cnpg.io", version="v1", plural="clusters", **kwargs
++                )
++            ),
++            namespaced_request=lambda **kwargs: ObjectLikeDict(
++                self.custom_objects.list_namespaced_custom_object(
++                    group="postgresql.cnpg.io", version="v1", plural="clusters", **kwargs
++                )
++            ),
++            extract_containers=_extract_containers,
++        )
++
+     def _list_strimzipodsets(self) -> list[K8sObjectData]:
+         # NOTE: Using custom objects API returns dicts, but all other APIs return objects
+         # We need to handle this difference using a small wrapper
+diff --git a/robusta_krr/core/integrations/prometheus/metrics_service/prometheus_metrics_service.py b/robusta_krr/core/integrations/prometheus/metrics_service/prometheus_metrics_service.py
+index bc19dca..b6996e9 100644
+--- a/robusta_krr/core/integrations/prometheus/metrics_service/prometheus_metrics_service.py
++++ b/robusta_krr/core/integrations/prometheus/metrics_service/prometheus_metrics_service.py
+@@ -318,6 +318,10 @@ class PrometheusMetricsService(MetricsService):
+ 
+             del replicasets
+ 
++        elif object.kind == "CloudNativePG":
++            pod_owners = [object.name]
++            pod_owner_kind = "Cluster"
++
+         elif object.kind == "DeploymentConfig":
+             replication_controllers = await self.query(f"""
+                     kube_replicationcontroller_owner{{
+diff --git a/robusta_krr/core/models/objects.py b/robusta_krr/core/models/objects.py
+index c24375b..aa6f94d 100644
+--- a/robusta_krr/core/models/objects.py
++++ b/robusta_krr/core/models/objects.py
+@@ -17,6 +17,7 @@ KindLiteral = Literal[
+     "Rollout",
+     "DeploymentConfig",
+     "StrimziPodSet",
++    "CloudNativePG",
+     "GroupedJob",
+ ]
+ 

@@ -1,0 +1,506 @@
+Name:                 api-676b69b6cd-9nvpw
+Namespace:            shop
+Priority:             100000
+Priority Class Name:  shop-shop-critical
+Service Account:      default
+Node:                 shop-worker/172.19.0.3
+Start Time:           Sat, 31 Oct 2026 01:03:53 +0300
+Labels:               app=api
+                      pod-template-hash=676b69b6cd
+Annotations:          <none>
+Status:               Running
+IP:                   10.244.2.14
+IPs:
+  IP:           10.244.2.14
+Controlled By:  ReplicaSet/api-676b69b6cd
+Containers:
+  api:
+    Container ID:   containerd://f0ba630961130ce3c57b912255b9ad48ab0a122e9ff8686e157f07c6cc969663
+    Image:          registry.shop.local/api:1.0.3
+    Image ID:       docker.io/library/import-2026-10-15@sha256:65b843435d45dcbff478fa92a24919d15e5a32e0c7cebd1ff59c5499eb959623
+    Port:           8080/TCP
+    Host Port:      0/TCP
+    State:          Running
+      Started:      Sat, 31 Oct 2026 01:03:54 +0300
+    Ready:          True
+    Restart Count:  0
+    Limits:
+      cpu:     100m
+      memory:  100Mi
+    Requests:
+      cpu:      100m
+      memory:   100Mi
+    Liveness:   http-get http://:8080/health delay=0s timeout=2s period=5s #success=1 #failure=5
+    Readiness:  http-get http://:8080/health delay=0s timeout=2s period=5s #success=1 #failure=2
+    Startup:    http-get http://:8080/health delay=0s timeout=2s period=2s #success=1 #failure=60
+    Environment:
+      DATABASE_URL:  <set to the key 'uri' in secret 'postgres-app'>  Optional: false
+      HEALTH_FAIL:   false
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-mntrq (ro)
+Conditions:
+  Type                        Status
+  PodReadyToStartContainers   True 
+  Initialized                 True 
+  Ready                       True 
+  ContainersReady             True 
+  PodScheduled                True 
+Volumes:
+  kube-api-access-mntrq:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    Optional:                false
+    DownwardAPI:             true
+QoS Class:                   Guaranteed
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+
+
+Name:                 api-676b69b6cd-jqjt4
+Namespace:            shop
+Priority:             100000
+Priority Class Name:  shop-shop-critical
+Service Account:      default
+Node:                 shop-worker/172.19.0.3
+Start Time:           Sat, 31 Oct 2026 01:03:59 +0300
+Labels:               app=api
+                      pod-template-hash=676b69b6cd
+Annotations:          <none>
+Status:               Running
+IP:                   10.244.2.15
+IPs:
+  IP:           10.244.2.15
+Controlled By:  ReplicaSet/api-676b69b6cd
+Containers:
+  api:
+    Container ID:   containerd://a08402ef821e9cdd0fd6908daba007300b43c63a307ad043e1f71f9fde0dc974
+    Image:          registry.shop.local/api:1.0.3
+    Image ID:       docker.io/library/import-2026-10-15@sha256:65b843435d45dcbff478fa92a24919d15e5a32e0c7cebd1ff59c5499eb959623
+    Port:           8080/TCP
+    Host Port:      0/TCP
+    State:          Running
+      Started:      Sat, 31 Oct 2026 01:03:59 +0300
+    Ready:          True
+    Restart Count:  0
+    Limits:
+      cpu:     100m
+      memory:  100Mi
+    Requests:
+      cpu:      100m
+      memory:   100Mi
+    Liveness:   http-get http://:8080/health delay=0s timeout=2s period=5s #success=1 #failure=5
+    Readiness:  http-get http://:8080/health delay=0s timeout=2s period=5s #success=1 #failure=2
+    Startup:    http-get http://:8080/health delay=0s timeout=2s period=2s #success=1 #failure=60
+    Environment:
+      DATABASE_URL:  <set to the key 'uri' in secret 'postgres-app'>  Optional: false
+      HEALTH_FAIL:   false
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-46sfx (ro)
+Conditions:
+  Type                        Status
+  PodReadyToStartContainers   True 
+  Initialized                 True 
+  Ready                       True 
+  ContainersReady             True 
+  PodScheduled                True 
+Volumes:
+  kube-api-access-46sfx:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    Optional:                false
+    DownwardAPI:             true
+QoS Class:                   Guaranteed
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+
+
+Name:                 api-676b69b6cd-rcqtp
+Namespace:            shop
+Priority:             100000
+Priority Class Name:  shop-shop-critical
+Service Account:      default
+Node:                 shop-worker2/172.19.0.4
+Start Time:           Sat, 31 Oct 2026 01:03:47 +0300
+Labels:               app=api
+                      pod-template-hash=676b69b6cd
+Annotations:          <none>
+Status:               Running
+IP:                   10.244.1.14
+IPs:
+  IP:           10.244.1.14
+Controlled By:  ReplicaSet/api-676b69b6cd
+Containers:
+  api:
+    Container ID:   containerd://c291cc7c8cb4487b5dea9cf8e0e8f47e6922f12a2134b95bfbbbfdfeeb8cd19d
+    Image:          registry.shop.local/api:1.0.3
+    Image ID:       docker.io/library/import-2026-10-15@sha256:65b843435d45dcbff478fa92a24919d15e5a32e0c7cebd1ff59c5499eb959623
+    Port:           8080/TCP
+    Host Port:      0/TCP
+    State:          Running
+      Started:      Sat, 31 Oct 2026 01:03:48 +0300
+    Ready:          True
+    Restart Count:  0
+    Limits:
+      cpu:     100m
+      memory:  100Mi
+    Requests:
+      cpu:      100m
+      memory:   100Mi
+    Liveness:   http-get http://:8080/health delay=0s timeout=2s period=5s #success=1 #failure=5
+    Readiness:  http-get http://:8080/health delay=0s timeout=2s period=5s #success=1 #failure=2
+    Startup:    http-get http://:8080/health delay=0s timeout=2s period=2s #success=1 #failure=60
+    Environment:
+      DATABASE_URL:  <set to the key 'uri' in secret 'postgres-app'>  Optional: false
+      HEALTH_FAIL:   false
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-vnmhl (ro)
+Conditions:
+  Type                        Status
+  PodReadyToStartContainers   True 
+  Initialized                 True 
+  Ready                       True 
+  ContainersReady             True 
+  PodScheduled                True 
+Volumes:
+  kube-api-access-vnmhl:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    Optional:                false
+    DownwardAPI:             true
+QoS Class:                   Guaranteed
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+
+
+Name:                 batch-77fdb54cc-sxkdx
+Namespace:            shop
+Priority:             -1000
+Priority Class Name:  shop-shop-batch
+Service Account:      default
+Node:                 shop-worker2/172.19.0.4
+Start Time:           Sat, 31 Oct 2026 01:01:39 +0300
+Labels:               app=batch
+                      pod-template-hash=77fdb54cc
+Annotations:          <none>
+Status:               Running
+IP:                   10.244.1.12
+IPs:
+  IP:           10.244.1.12
+Controlled By:  ReplicaSet/batch-77fdb54cc
+Containers:
+  batch:
+    Container ID:   containerd://cb239ca90a4340a7e3dbb84fb974c28da8c52cf959cd96e9b23b77891f1eaa47
+    Image:          registry.shop.local/batch:0.1.0
+    Image ID:       docker.io/library/import-2026-10-30@sha256:1c15770a3a54697d41446d2eb1e244027b96ff24ea5c4fe7cb3577cb6b3cb704
+    Port:           <none>
+    Host Port:      <none>
+    State:          Running
+      Started:      Sat, 31 Oct 2026 01:01:40 +0300
+    Ready:          True
+    Restart Count:  0
+    Limits:
+      cpu:     1
+      memory:  512Mi
+    Requests:
+      cpu:     100m
+      memory:  256Mi
+    Environment:
+      MEMORY_MB:          128
+      JAVA_TOOL_OPTIONS:  -XX:MaxRAMPercentage=70.0
+      CPU_WORKERS:        1
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-m2gp8 (ro)
+Conditions:
+  Type                        Status
+  PodReadyToStartContainers   True 
+  Initialized                 True 
+  Ready                       True 
+  ContainersReady             True 
+  PodScheduled                True 
+Volumes:
+  kube-api-access-m2gp8:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    Optional:                false
+    DownwardAPI:             true
+QoS Class:                   Burstable
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+
+
+Name:                 postgres-1
+Namespace:            shop
+Priority:             100000
+Priority Class Name:  shop-shop-critical
+Service Account:      postgres
+Node:                 shop-worker/172.19.0.3
+Start Time:           Sat, 31 Oct 2026 00:02:29 +0300
+Labels:               app=postgres
+                      app.kubernetes.io/component=database
+                      app.kubernetes.io/instance=postgres
+                      app.kubernetes.io/managed-by=cloudnative-pg
+                      app.kubernetes.io/name=postgresql
+                      app.kubernetes.io/version=18
+                      cnpg.io/cluster=postgres
+                      cnpg.io/instanceName=postgres-1
+                      cnpg.io/instanceRole=primary
+                      cnpg.io/podRole=instance
+                      role=primary
+Annotations:          cnpg.io/nodeSerial: 1
+                      cnpg.io/operatorVersion: 1.30.1
+                      cnpg.io/podEnvHash: 8f8d6944d
+                      cnpg.io/podSpec:
+                        {"volumes":[{"name":"pgdata","persistentVolumeClaim":{"claimName":"postgres-1"}},{"name":"scratch-data","emptyDir":{}},{"name":"shm","empt...
+Status:               Running
+SeccompProfile:       RuntimeDefault
+IP:                   10.244.2.4
+IPs:
+  IP:           10.244.2.4
+Controlled By:  Cluster/postgres
+Init Containers:
+  bootstrap-controller:
+    Container ID:    containerd://83b099bb5c328fc7114e811bd3c55bfe939cf54839b5c1e26af038fb6ba09a9a
+    Image:           ghcr.io/cloudnative-pg/cloudnative-pg:1.30.1
+    Image ID:        ghcr.io/cloudnative-pg/cloudnative-pg@sha256:923c267ec29636db3bee20f993d0ec4973fa22998e1adad37da79e4d32b5bc07
+    Port:            <none>
+    Host Port:       <none>
+    SeccompProfile:  RuntimeDefault
+    Command:
+      /manager
+      bootstrap
+      /controller/manager
+      --log-level=info
+    State:          Terminated
+      Reason:       Completed
+      Exit Code:    0
+      Started:      Sat, 31 Oct 2026 00:49:38 +0300
+      Finished:     Sat, 31 Oct 2026 00:49:39 +0300
+    Last State:     Terminated
+      Reason:       Completed
+      Exit Code:    0
+      Started:      Sat, 31 Oct 2026 00:02:30 +0300
+      Finished:     Sat, 31 Oct 2026 00:02:30 +0300
+    Ready:          True
+    Restart Count:  1
+    Limits:
+      cpu:     250m
+      memory:  512Mi
+    Requests:
+      cpu:        250m
+      memory:     512Mi
+    Environment:  <none>
+    Mounts:
+      /controller from scratch-data (rw)
+      /dev/shm from shm (rw)
+      /run from scratch-data (rw)
+      /var/lib/postgresql/data from pgdata (rw)
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-ctb54 (ro)
+Containers:
+  postgres:
+    Container ID:    containerd://6180ddc466374ef83abded81878292b7c9956dfe36f11e51e28b1baa093f430c
+    Image:           registry.shop.local/postgresql:18.6-system-trixie
+    Image ID:        docker.io/library/import-2026-10-15@sha256:df659c71593baa77b4a91af450280d728731a352e4ba823f37d7c92fbaed3ab0
+    Ports:           5432/TCP (postgresql), 9187/TCP (metrics), 8000/TCP (status)
+    Host Ports:      0/TCP (postgresql), 0/TCP (metrics), 0/TCP (status)
+    SeccompProfile:  RuntimeDefault
+    Command:
+      /controller/manager
+      instance
+      run
+      --status-port-tls
+      --log-level=info
+    State:          Running
+      Started:      Sat, 31 Oct 2026 00:49:40 +0300
+    Last State:     Terminated
+      Reason:       Unknown
+      Exit Code:    255
+      Started:      Sat, 31 Oct 2026 00:02:31 +0300
+      Finished:     Sat, 31 Oct 2026 00:49:30 +0300
+    Ready:          True
+    Restart Count:  1
+    Limits:
+      cpu:     250m
+      memory:  512Mi
+    Requests:
+      cpu:      250m
+      memory:   512Mi
+    Liveness:   http-get https://:8000/healthz delay=0s timeout=5s period=10s #success=1 #failure=3
+    Readiness:  http-get https://:8000/readyz delay=0s timeout=5s period=10s #success=1 #failure=3
+    Startup:    http-get https://:8000/startupz delay=0s timeout=5s period=10s #success=1 #failure=360
+    Environment:
+      PGDATA:        /var/lib/postgresql/data/pgdata
+      POD_NAME:      postgres-1
+      NAMESPACE:     shop
+      CLUSTER_NAME:  postgres
+      PSQL_HISTORY:  /controller/tmp/.psql_history
+      PGPORT:        5432
+      PGHOST:        /controller/run
+      TMPDIR:        /controller/tmp
+    Mounts:
+      /controller from scratch-data (rw)
+      /dev/shm from shm (rw)
+      /run from scratch-data (rw)
+      /var/lib/postgresql/data from pgdata (rw)
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-ctb54 (ro)
+Conditions:
+  Type                        Status
+  PodReadyToStartContainers   True 
+  Initialized                 True 
+  Ready                       True 
+  ContainersReady             True 
+  PodScheduled                True 
+Volumes:
+  pgdata:
+    Type:       PersistentVolumeClaim (a reference to a PersistentVolumeClaim in the same namespace)
+    ClaimName:  postgres-1
+    ReadOnly:   false
+  scratch-data:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:     
+    SizeLimit:  <unset>
+  shm:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:     Memory
+    SizeLimit:  <unset>
+  kube-api-access-ctb54:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    Optional:                false
+    DownwardAPI:             true
+QoS Class:                   Guaranteed
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+
+
+Name:             worker-c4d48c984-6bqls
+Namespace:        shop
+Priority:         0
+Service Account:  default
+Node:             shop-worker/172.19.0.3
+Start Time:       Sat, 31 Oct 2026 00:02:33 +0300
+Labels:           app=worker
+                  pod-template-hash=c4d48c984
+Annotations:      <none>
+Status:           Running
+IP:               10.244.2.5
+IPs:
+  IP:           10.244.2.5
+Controlled By:  ReplicaSet/worker-c4d48c984
+Containers:
+  worker:
+    Container ID:   containerd://21a975f806994637888991af980d75a479b0bcee39098639eb438c73455df940
+    Image:          registry.shop.local/worker:1.0.0
+    Image ID:       sha256:cb8d953a70f8fa7b676f52a9c16955a9a971266080279e32e21a82f0828500c5
+    Port:           8080/TCP
+    Host Port:      0/TCP
+    State:          Running
+      Started:      Sat, 31 Oct 2026 00:49:37 +0300
+    Last State:     Terminated
+      Reason:       Unknown
+      Exit Code:    255
+      Started:      Sat, 31 Oct 2026 00:02:33 +0300
+      Finished:     Sat, 31 Oct 2026 00:49:30 +0300
+    Ready:          True
+    Restart Count:  1
+    Limits:
+      cpu:     250m
+      memory:  100Mi
+    Requests:
+      cpu:      10m
+      memory:   100Mi
+    Liveness:   http-get http://:8080/health delay=0s timeout=1s period=5s #success=1 #failure=5
+    Readiness:  http-get http://:8080/health delay=0s timeout=1s period=5s #success=1 #failure=2
+    Environment:
+      DATABASE_URL:  <set to the key 'uri' in secret 'postgres-app'>  Optional: false
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-wkgh2 (ro)
+Conditions:
+  Type                        Status
+  PodReadyToStartContainers   True 
+  Initialized                 True 
+  Ready                       True 
+  ContainersReady             True 
+  PodScheduled                True 
+Volumes:
+  kube-api-access-wkgh2:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    Optional:                false
+    DownwardAPI:             true
+QoS Class:                   Burstable
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+
+
+Name:             worker-c4d48c984-x2vw2
+Namespace:        shop
+Priority:         0
+Service Account:  default
+Node:             shop-worker2/172.19.0.4
+Start Time:       Sat, 31 Oct 2026 00:02:26 +0300
+Labels:           app=worker
+                  pod-template-hash=c4d48c984
+Annotations:      <none>
+Status:           Running
+IP:               10.244.1.11
+IPs:
+  IP:           10.244.1.11
+Controlled By:  ReplicaSet/worker-c4d48c984
+Containers:
+  worker:
+    Container ID:   containerd://982c9f2bb9159360b9d7a93a8fdd8e0ca7244f80f0ad2cfd6ca05f3751226a58
+    Image:          registry.shop.local/worker:1.0.0
+    Image ID:       sha256:cb8d953a70f8fa7b676f52a9c16955a9a971266080279e32e21a82f0828500c5
+    Port:           8080/TCP
+    Host Port:      0/TCP
+    State:          Running
+      Started:      Sat, 31 Oct 2026 00:49:39 +0300
+    Last State:     Terminated
+      Reason:       Unknown
+      Exit Code:    255
+      Started:      Sat, 31 Oct 2026 00:02:27 +0300
+      Finished:     Sat, 31 Oct 2026 00:49:30 +0300
+    Ready:          True
+    Restart Count:  1
+    Limits:
+      cpu:     250m
+      memory:  100Mi
+    Requests:
+      cpu:      10m
+      memory:   100Mi
+    Liveness:   http-get http://:8080/health delay=0s timeout=1s period=5s #success=1 #failure=5
+    Readiness:  http-get http://:8080/health delay=0s timeout=1s period=5s #success=1 #failure=2
+    Environment:
+      DATABASE_URL:  <set to the key 'uri' in secret 'postgres-app'>  Optional: false
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-hs4q7 (ro)
+Conditions:
+  Type                        Status
+  PodReadyToStartContainers   True 
+  Initialized                 True 
+  Ready                       True 
+  ContainersReady             True 
+  PodScheduled                True 
+Volumes:
+  kube-api-access-hs4q7:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    Optional:                false
+    DownwardAPI:             true
+QoS Class:                   Burstable
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s

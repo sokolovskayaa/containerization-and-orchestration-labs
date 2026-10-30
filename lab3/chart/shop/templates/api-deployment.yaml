@@ -14,22 +14,34 @@ spec:
       labels:
         app: api
     spec:
+      {{- if .Values.protection.enabled }}
+      priorityClassName: {{ printf "%s-%s-critical" .Release.Namespace .Release.Name | quote }}
+      {{- end }}
       containers:
       - image: {{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}
         name: api
         ports:
         - containerPort: 8080
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          periodSeconds: 2
+          timeoutSeconds: 2
+          failureThreshold: 60
         readinessProbe:
           httpGet:
             path: /health
             port: 8080
           periodSeconds: 5
+          timeoutSeconds: 2
           failureThreshold: 2
         livenessProbe:
           httpGet:
             path: /health
             port: 8080
           periodSeconds: 5
+          timeoutSeconds: 2
           failureThreshold: 5
         lifecycle:
           preStop: 
@@ -44,6 +56,9 @@ spec:
         - name: HEALTH_FAIL
           value: {{ .Values.api.healthFail | quote }}       
         resources:
+          requests:
+            cpu: {{ .Values.api.resources.requests.cpu }}
+            memory: {{ .Values.api.resources.requests.memory }}
           limits:
             cpu: {{ .Values.api.resources.limits.cpu }}
             memory: {{ .Values.api.resources.limits.memory }}

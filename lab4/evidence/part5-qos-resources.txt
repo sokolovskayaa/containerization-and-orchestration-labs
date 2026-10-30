@@ -1,0 +1,21 @@
+PART 5: actual pod QoS and priorities
+
+NAME                     READY   QOS          PRIORITY   CLASS
+api-676b69b6cd-9nvpw     true    Guaranteed   100000     shop-shop-critical
+api-676b69b6cd-jqjt4     true    Guaranteed   100000     shop-shop-critical
+api-676b69b6cd-rcqtp     true    Guaranteed   100000     shop-shop-critical
+batch-77fdb54cc-sxkdx    true    Burstable    -1000      shop-shop-batch
+postgres-1               true    Guaranteed   100000     shop-shop-critical
+worker-c4d48c984-6bqls   true    Burstable    0          <none>
+worker-c4d48c984-x2vw2   true    Burstable    0          <none>
+
+Resource requests and limits
+
+NAME                     CPU_REQ   CPU_LIMIT   MEM_REQ   MEM_LIMIT
+api-676b69b6cd-9nvpw     100m      100m        100Mi     100Mi
+api-676b69b6cd-jqjt4     100m      100m        100Mi     100Mi
+api-676b69b6cd-rcqtp     100m      100m        100Mi     100Mi
+batch-77fdb54cc-sxkdx    100m      1           256Mi     512Mi
+postgres-1               250m      250m        512Mi     512Mi
+worker-c4d48c984-6bqls   10m       250m        100Mi     100Mi
+worker-c4d48c984-x2vw2   10m       250m        100Mi     100Mi

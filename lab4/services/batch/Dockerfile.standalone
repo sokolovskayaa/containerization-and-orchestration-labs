@@ -1,0 +1,11 @@
+FROM eclipse-temurin:25-jdk AS build
+WORKDIR /workspace
+COPY standalone/Batch.java ./
+RUN javac -d /workspace/classes Batch.java
+
+FROM eclipse-temurin:25-jre
+WORKDIR /app
+RUN useradd --create-home --uid 10001 batch
+COPY --from=build /workspace/classes/ /app/
+USER batch
+ENTRYPOINT ["java", "-cp", "/app", "Batch"]

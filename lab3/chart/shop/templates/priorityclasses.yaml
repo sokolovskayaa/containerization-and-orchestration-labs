@@ -1,0 +1,19 @@
+{{- if .Values.protection.enabled }}
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: {{ printf "%s-%s-critical" .Release.Namespace .Release.Name }}
+value: {{ .Values.protection.criticalPriority }}
+globalDefault: false
+preemptionPolicy: PreemptLowerPriority
+description: "Critical order path: api and postgres"
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: {{ printf "%s-%s-batch" .Release.Namespace .Release.Name }}
+value: {{ .Values.protection.batchPriority }}
+globalDefault: false
+preemptionPolicy: Never
+description: "Background batch workload"
+{{- end }}

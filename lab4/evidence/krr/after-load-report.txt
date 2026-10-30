@@ -1,0 +1,30 @@
+                                                                                                                                                
+Simple Strategy                                                                                                                                 
+                                                                                                                                                
+CPU request: 95.0% percentile, limit: unset                                                                                                     
+Memory request: max + 15.0%, limit: max + 15.0%                                                                                                 
+History: 1.0 hours                                                                                                                              
+Step: 0.25 minutes                                                                                                                              
+                                                                                                                                                
+All parameters can be customized. For example: `krr simple --cpu_percentile=90 --memory_buffer_percentage=15 --history_duration=24              
+--timeframe_duration=0.5`                                                                                                                       
+                                                                                                                                                
+This strategy does not work with objects with HPA defined (Horizontal Pod Autoscaler).                                                          
+If HPA is defined for CPU or Memory, the strategy will return "?" for that resource.                                                            
+You can override this behaviour by passing the --allow-hpa flag                                                                                 
+                                                                                                                                                
+Learn more: https://github.com/robusta-dev/krr#algorithm                                                                                        
+                                                                                                                                                
+┏━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━┳━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┓
+┃        ┃           ┃        ┃      ┃          ┃           ┃           ┃          ┃ CPU       ┃ CPU       ┃ Memory    ┃ Memory    ┃ Memory    ┃
+┃ Number ┃ Namespace ┃ Name   ┃ Pods ┃ Old Pods ┃ Type      ┃ Container ┃ CPU Diff ┃ Requests  ┃ Limits    ┃ Diff      ┃ Requests  ┃ Limits    ┃
+┡━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━╇━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━┩
+│     1. │ shop      │ api    │ 3    │ 0        │ Deployme… │ api       │ +30m     │ (+10m)    │ 250m ->   │ +300Mi    │ (+100Mi)  │ 128Mi ->  │
+│        │           │        │      │          │           │           │ (3 pods) │ unset ->  │ unset     │ (3 pods)  │ unset ->  │ 100Mi     │
+│        │           │        │      │          │           │           │          │ 10m       │           │           │ 100Mi     │           │
+├────────┼───────────┼────────┼──────┼──────────┼───────────┼───────────┼──────────┼───────────┼───────────┼───────────┼───────────┼───────────┤
+│     2. │ shop      │ worker │ 2    │ 0        │ Deployme… │ worker    │ +20m     │ (+10m)    │ 250m ->   │ +200Mi    │ (+100Mi)  │ 128Mi ->  │
+│        │           │        │      │          │           │           │ (2 pods) │ unset ->  │ unset     │ (2 pods)  │ unset ->  │ 100Mi     │
+│        │           │        │      │          │           │           │          │ 10m       │           │           │ 100Mi     │           │
+└────────┴───────────┴────────┴──────┴──────────┴───────────┴───────────┴──────────┴───────────┴───────────┴───────────┴───────────┴───────────┘
+                                                                 30 points - D                                                                  

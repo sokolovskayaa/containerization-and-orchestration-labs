@@ -3,11 +3,19 @@ kind: Cluster
 metadata:
   name: postgres
 spec:
+  {{- if .Values.protection.enabled }}
+  priorityClassName: {{ printf "%s-%s-critical" .Release.Namespace .Release.Name | quote }}
+  # Helm owns the PDB below; disable CNPG's automatic PDBs to avoid overlap.
+  enablePDB: false
+  {{- end }}
   instances: {{ .Values.postgres.instances }}
   imageName: {{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}
   storage:
     size: {{ .Values.postgres.storage.size }}
   resources:
+    requests:
+      cpu: {{ .Values.postgres.resources.requests.cpu }}
+      memory: {{ .Values.postgres.resources.requests.memory }}
     limits:
       cpu: {{ .Values.postgres.resources.limits.cpu }}
       memory: {{ .Values.postgres.resources.limits.memory }}

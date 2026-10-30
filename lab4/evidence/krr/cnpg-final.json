@@ -1,0 +1,395 @@
+{
+  "scans": [
+    {
+      "object": {
+        "cluster": "kind-shop",
+        "name": "api",
+        "container": "api",
+        "pods": [
+          {
+            "name": "api-676b69b6cd-9nvpw",
+            "deleted": false
+          },
+          {
+            "name": "api-676b69b6cd-jqjt4",
+            "deleted": false
+          },
+          {
+            "name": "api-5c7b4b9678-slsfd",
+            "deleted": true
+          },
+          {
+            "name": "api-5c7b4b9678-9phs2",
+            "deleted": true
+          },
+          {
+            "name": "api-7bc878dcff-mg8m9",
+            "deleted": true
+          },
+          {
+            "name": "api-676b69b6cd-rcqtp",
+            "deleted": false
+          },
+          {
+            "name": "api-7bc878dcff-db4hm",
+            "deleted": true
+          },
+          {
+            "name": "api-7bc878dcff-69h86",
+            "deleted": true
+          },
+          {
+            "name": "api-56595756cb-rpf2c",
+            "deleted": true
+          }
+        ],
+        "hpa": null,
+        "namespace": "shop",
+        "kind": "Deployment",
+        "allocations": {
+          "requests": {
+            "cpu": 0.1,
+            "memory": 104857600.0
+          },
+          "limits": {
+            "cpu": 0.1,
+            "memory": 104857600.0
+          },
+          "info": {}
+        },
+        "warnings": [],
+        "labels": {
+          "app": "api",
+          "app.kubernetes.io/managed-by": "Helm"
+        },
+        "annotations": {
+          "deployment.kubernetes.io/revision": "14",
+          "meta.helm.sh/release-name": "shop",
+          "meta.helm.sh/release-namespace": "shop"
+        }
+      },
+      "recommended": {
+        "requests": {
+          "cpu": {
+            "value": 0.1,
+            "severity": "GOOD"
+          },
+          "memory": {
+            "value": 104857600.0,
+            "severity": "GOOD"
+          }
+        },
+        "limits": {
+          "cpu": {
+            "value": null,
+            "severity": "WARNING"
+          },
+          "memory": {
+            "value": 104857600.0,
+            "severity": "GOOD"
+          }
+        },
+        "info": {
+          "cpu": null,
+          "memory": null
+        }
+      },
+      "severity": "WARNING"
+    },
+    {
+      "object": {
+        "cluster": "kind-shop",
+        "name": "batch",
+        "container": "batch",
+        "pods": [
+          {
+            "name": "batch-6c6b77fb7-xdbqf",
+            "deleted": true
+          },
+          {
+            "name": "batch-77fdb54cc-sxkdx",
+            "deleted": false
+          }
+        ],
+        "hpa": null,
+        "namespace": "shop",
+        "kind": "Deployment",
+        "allocations": {
+          "requests": {
+            "cpu": 0.1,
+            "memory": 268435456.0
+          },
+          "limits": {
+            "cpu": 1.0,
+            "memory": 536870912.0
+          },
+          "info": {}
+        },
+        "warnings": [],
+        "labels": {
+          "app": "batch",
+          "app.kubernetes.io/managed-by": "Helm"
+        },
+        "annotations": {
+          "deployment.kubernetes.io/revision": "2",
+          "meta.helm.sh/release-name": "shop",
+          "meta.helm.sh/release-namespace": "shop"
+        }
+      },
+      "recommended": {
+        "requests": {
+          "cpu": {
+            "value": "?",
+            "severity": "UNKNOWN"
+          },
+          "memory": {
+            "value": "?",
+            "severity": "UNKNOWN"
+          }
+        },
+        "limits": {
+          "cpu": {
+            "value": "?",
+            "severity": "UNKNOWN"
+          },
+          "memory": {
+            "value": "?",
+            "severity": "UNKNOWN"
+          }
+        },
+        "info": {
+          "cpu": "Not enough data",
+          "memory": "Not enough data"
+        }
+      },
+      "severity": "UNKNOWN"
+    },
+    {
+      "object": {
+        "cluster": "kind-shop",
+        "name": "worker",
+        "container": "worker",
+        "pods": [
+          {
+            "name": "worker-c4d48c984-x2vw2",
+            "deleted": false
+          },
+          {
+            "name": "worker-c4d48c984-6bqls",
+            "deleted": false
+          }
+        ],
+        "hpa": null,
+        "namespace": "shop",
+        "kind": "Deployment",
+        "allocations": {
+          "requests": {
+            "cpu": 0.01,
+            "memory": 104857600.0
+          },
+          "limits": {
+            "cpu": 0.25,
+            "memory": 104857600.0
+          },
+          "info": {}
+        },
+        "warnings": [],
+        "labels": {
+          "app": "worker",
+          "app.kubernetes.io/managed-by": "Helm"
+        },
+        "annotations": {
+          "deployment.kubernetes.io/revision": "3",
+          "meta.helm.sh/release-name": "shop",
+          "meta.helm.sh/release-namespace": "shop"
+        }
+      },
+      "recommended": {
+        "requests": {
+          "cpu": {
+            "value": 0.1,
+            "severity": "GOOD"
+          },
+          "memory": {
+            "value": 104857600.0,
+            "severity": "GOOD"
+          }
+        },
+        "limits": {
+          "cpu": {
+            "value": null,
+            "severity": "WARNING"
+          },
+          "memory": {
+            "value": 104857600.0,
+            "severity": "GOOD"
+          }
+        },
+        "info": {
+          "cpu": null,
+          "memory": null
+        }
+      },
+      "severity": "WARNING"
+    },
+    {
+      "object": {
+        "cluster": "kind-shop",
+        "name": "postgres",
+        "container": "postgres",
+        "pods": [
+          {
+            "name": "postgres-1",
+            "deleted": false
+          }
+        ],
+        "hpa": null,
+        "namespace": "shop",
+        "kind": "CloudNativePG",
+        "allocations": {
+          "requests": {
+            "cpu": 0.25,
+            "memory": 536870912.0
+          },
+          "limits": {
+            "cpu": 0.25,
+            "memory": 536870912.0
+          },
+          "info": {}
+        },
+        "warnings": [],
+        "labels": {
+          "app.kubernetes.io/managed-by": "Helm"
+        },
+        "annotations": {
+          "meta.helm.sh/release-name": "shop",
+          "meta.helm.sh/release-namespace": "shop"
+        }
+      },
+      "recommended": {
+        "requests": {
+          "cpu": {
+            "value": 0.1,
+            "severity": "OK"
+          },
+          "memory": {
+            "value": 143654912.0,
+            "severity": "WARNING"
+          }
+        },
+        "limits": {
+          "cpu": {
+            "value": null,
+            "severity": "WARNING"
+          },
+          "memory": {
+            "value": 143654912.0,
+            "severity": "WARNING"
+          }
+        },
+        "info": {
+          "cpu": null,
+          "memory": null
+        }
+      },
+      "severity": "WARNING"
+    }
+  ],
+  "score": 47,
+  "resources": [
+    "cpu",
+    "memory"
+  ],
+  "description": "[b]Simple Strategy[/b]\n\nCPU request: 95.0% percentile, limit: unset\nMemory request: max + 15.0%, limit: max + 15.0%\nHistory: 1.0 hours\nStep: 0.25 minutes\n\nAll parameters can be customized. For example: `krr simple --cpu_percentile=90 --memory_buffer_percentage=15 --history_duration=24 --timeframe_duration=0.5`\n\nThis strategy does not work with objects with HPA defined (Horizontal Pod Autoscaler).\nIf HPA is defined for CPU or Memory, the strategy will return \"?\" for that resource.\nYou can override this behaviour by passing the --allow-hpa flag\n\nLearn more: [underline]https://github.com/robusta-dev/krr#algorithm[/underline]",
+  "strategy": {
+    "name": "simple",
+    "settings": {
+      "history_duration": 1.0,
+      "timeframe_duration": 0.25,
+      "cpu_percentile": 95.0,
+      "memory_buffer_percentage": 15.0,
+      "points_required": 100,
+      "allow_hpa": false,
+      "use_oomkill_data": false,
+      "oom_memory_buffer_percentage": 25.0
+    }
+  },
+  "errors": [
+    {
+      "name": "NotEnoughHistoryAvailable",
+      "retry_after": "2026-10-31T00:20:17"
+    }
+  ],
+  "clusterSummary": {
+    "cluster_memory": 24959311872.0,
+    "cluster_cpu": 24.0,
+    "kube_system_mem_req": 408944640.0,
+    "kube_system_cpu_req": 1.1500000000000001
+  },
+  "config": {
+    "quiet": false,
+    "verbose": false,
+    "clusters": [
+      "kind-shop"
+    ],
+    "kubeconfig": null,
+    "impersonate_user": null,
+    "impersonate_group": null,
+    "namespaces": [
+      "shop"
+    ],
+    "resources": "*",
+    "selector": null,
+    "cpu_min_value": 100,
+    "memory_min_value": 100,
+    "prometheus_url": "http://127.0.0.1:19090/api/v1/namespaces/monitoring/services/monitoring-kube-prometheus-prometheus:9090/proxy",
+    "prometheus_auth_header": null,
+    "prometheus_other_headers": {},
+    "prometheus_ssl_enabled": false,
+    "prometheus_cluster_label": null,
+    "prometheus_label": null,
+    "eks_managed_prom": false,
+    "eks_managed_prom_profile_name": null,
+    "eks_access_key": null,
+    "eks_secret_key": null,
+    "eks_service_name": "aps",
+    "eks_managed_prom_region": null,
+    "eks_assume_role": null,
+    "coralogix_token": null,
+    "openshift": false,
+    "max_workers": 10,
+    "discovery_job_batch_size": 5000,
+    "discovery_job_max_batches": 100,
+    "job_grouping_labels": null,
+    "job_grouping_limit": 500,
+    "format": "json",
+    "show_cluster_name": false,
+    "strategy": "simple",
+    "log_to_stderr": true,
+    "width": null,
+    "show_severity": true,
+    "publish_scan_url": null,
+    "start_time": null,
+    "scan_id": null,
+    "named_sinks": [],
+    "file_output": null,
+    "file_output_dynamic": false,
+    "slack_output": null,
+    "slack_title": null,
+    "azureblob_output": null,
+    "teams_webhook": null,
+    "azure_subscription_id": null,
+    "azure_resource_group": null,
+    "other_args": {
+      "history_duration": "1",
+      "timeframe_duration": "0.25",
+      "cpu_percentile": "95",
+      "memory_buffer_percentage": "15",
+      "points_required": "100",
+      "allow_hpa": false,
+      "use_oomkill_data": false,
+      "oom_memory_buffer_percentage": "25"
+    },
+    "inside_cluster": false
+  }
+}

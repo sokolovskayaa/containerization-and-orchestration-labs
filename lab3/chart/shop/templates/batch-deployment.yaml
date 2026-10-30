@@ -1,0 +1,34 @@
+{{- if .Values.batch.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: batch
+  labels:
+    app: batch
+spec:
+  replicas: {{ .Values.batch.replicas }}
+  selector:
+    matchLabels:
+      app: batch
+  template:
+    metadata:
+      labels:
+        app: batch
+    spec:
+      {{- if .Values.protection.enabled }}
+      priorityClassName: {{ printf "%s-%s-batch" .Release.Namespace .Release.Name | quote }}
+      {{- end }}
+      terminationGracePeriodSeconds: 5
+      containers:
+        - name: batch
+          image: {{ printf "%s:%s" .Values.batch.image.repository .Values.batch.image.tag | quote }}
+          env:
+            - name: MEMORY_MB
+              value: {{ .Values.batch.memoryMb | quote }}
+            - name: JAVA_TOOL_OPTIONS
+              value: {{ .Values.batch.javaToolOptions | quote }}
+            - name: CPU_WORKERS
+              value: {{ .Values.batch.cpuWorkers | quote }}
+          resources:
+            {{- toYaml .Values.batch.resources | nindent 12 }}
+{{- end }}

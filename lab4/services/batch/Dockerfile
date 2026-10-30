@@ -7,7 +7,8 @@ COPY gradle gradle
 COPY build.gradle settings.gradle ./
 COPY src src
 
-RUN chmod +x gradlew \
+RUN --mount=type=cache,target=/root/.gradle \
+    chmod +x gradlew \
     && ./gradlew installDist --no-daemon
 
 FROM eclipse-temurin:25-jre

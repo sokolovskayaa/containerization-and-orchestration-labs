@@ -1,0 +1,17 @@
+PART 6: real scheduler preemption events
+
+POD                      REASON      MESSAGE
+batch-5c5b6cfbdb-lg8lf   Preempted   Preempted by pod 1e3f578a-8218-4168-a7e2-7d3aed19daf3 on node shop-lab4-control-plane
+batch-5c5b6cfbdb-r65kq   Preempted   Preempted by pod e460784b-0257-4cbf-8941-0cb3aa9bcfdf on node shop-lab4-worker
+
+Deployments after adding high-priority API replicas
+
+NAME    READY   UP-TO-DATE   AVAILABLE   AGE
+api     16/16   16           16          44m
+batch   11/20   20           11          44m
+
+API pods whose UIDs appear in the preemption events
+
+API POD                       PRIORITY  CPU REQUEST  NODE
+api-676b69b6cd-vtglg 100000 100m shop-lab4-control-plane
+api-676b69b6cd-td9l5 100000 100m shop-lab4-worker
