@@ -69,7 +69,7 @@ API 10m не выдержал проверку: зарегистрированы
 таймауты базы. У API установлены равные requests/limits 100m/100Mi. Batch
 получил MaxRAMPercentage=70.0; PostgreSQL остался 250m/512Mi. Ревизия Helm 36
 deployed. Через Service успешно созданы 150 из 150 заказов. Это корректировка
-исходной рекомендации, а не новый результат krr. Итог: [PART5.md](../../PART5.md).
+исходной рекомендации, а не новый результат krr. Итоговое описание находится в lab4/README.md.
 
 
 ## Финальная проверка на двух нодах
@@ -81,4 +81,4 @@ deployments-final.json и postgres-final.json задают явные CPU floors
 100m (API/worker) и 250m (PostgreSQL), обоснованные проверками. Итоговые
 ресурсы получены генератором derive-part5-values.py. На новом shop-lab4
 из двух нод: все поды Ready, Guaranteed критического пути, Burstable batch.
-300/300 заказов через Service, p95=31.25ms. См. ../../PART5.md.
+300/300 заказов через Service, p95=31.25ms. Описание находится в lab4/README.md.
