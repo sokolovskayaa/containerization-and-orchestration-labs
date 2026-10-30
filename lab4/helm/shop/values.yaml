@@ -5,8 +5,8 @@ api:
     tag: "1.0.3"
   resources:
     requests:
-      cpu: "100m"
-      memory: "128Mi"
+      cpu: "75m"
+      memory: "100Mi"
     limits:
       cpu: "250m"
       memory: "256Mi"
@@ -18,8 +18,8 @@ worker:
     tag: "1.0.0"
   resources:
     requests:
-      cpu: "100m"
-      memory: "128Mi"
+      cpu: "10m"
+      memory: "100Mi"
     limits:
       cpu: "250m"
       memory: "256Mi"
@@ -33,8 +33,8 @@ postgres:
     size: "1Gi"
   resources:
     requests:
-      cpu: "250m"
-      memory: "512Mi"
+      cpu: "100m"
+      memory: "130Mi"
     limits:
       cpu: "500m"
       memory: "1Gi"
