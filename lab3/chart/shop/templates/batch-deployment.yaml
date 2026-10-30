@@ -25,6 +25,8 @@ spec:
           env:
             - name: MEMORY_MB
               value: {{ .Values.batch.memoryMb | quote }}
+            - name: JAVA_TOOL_OPTIONS
+              value: {{ .Values.batch.javaToolOptions | quote }}
             - name: CPU_WORKERS
               value: {{ .Values.batch.cpuWorkers | quote }}
           resources:

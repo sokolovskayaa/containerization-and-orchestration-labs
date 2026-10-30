@@ -55,6 +55,7 @@ batch:
   image:
     repository: registry.shop.local/batch
     tag: "0.1.0"
+  javaToolOptions: "-XX:MaxRAMPercentage=70.0"
   memoryMb: 128
   cpuWorkers: 1
   resources:

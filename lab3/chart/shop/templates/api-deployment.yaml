@@ -22,17 +22,26 @@ spec:
         name: api
         ports:
         - containerPort: 8080
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          periodSeconds: 2
+          timeoutSeconds: 2
+          failureThreshold: 60
         readinessProbe:
           httpGet:
             path: /health
             port: 8080
           periodSeconds: 5
+          timeoutSeconds: 2
           failureThreshold: 2
         livenessProbe:
           httpGet:
             path: /health
             port: 8080
           periodSeconds: 5
+          timeoutSeconds: 2
           failureThreshold: 5
         lifecycle:
           preStop: 

@@ -462,40 +462,17 @@ http_req_duration..: avg=44.3ms  p(90)=101.91ms  p(95)=129.01ms  max=230.59ms
 `krr` для рекомендации значений `requests` и `limits` критического пути.
 
 
-## Часть 5 — приоритеты, QoS и PDB (подготовленные настройки)
+## Часть 5 — приоритеты, QoS и PDB
 
-В чарт shop добавлены PriorityClass для критического пути (приоритет 100000)
-и фоновой нагрузки (-1000). Имена при релизе shop в namespace shop:
-shop-shop-critical и shop-shop-batch. API и PostgreSQL используют критический
-класс и равные requests/limits по CPU и памяти для Guaranteed. Добавлены PDB
-для API и primary PostgreSQL. Автоматические PDB CNPG при включении защиты
-отключаются, чтобы избежать пересечения бюджетов.
+[Отчёт с фактическими результатами](PART5.md). Helm shop, ревизия 36:
+**deployed**. API и PostgreSQL — Guaranteed с приоритетом 100000;
+batch — Burstable с приоритетом -1000. Все поды Ready.
 
-Применение с batch (после сборки и загрузки образа):
-
-```bash
-helm upgrade shop lab3/chart/shop -n shop -f lab4/values-part5-krr.yaml
-```
-
-KRR рекомендовал API и worker 10m CPU request и 100Mi памяти; CPU limit —
-unset. В API конечный CPU limit установлен равным request ради Guaranteed;
-работоспособность при 10m ещё требует проверки. Для PostgreSQL рекомендаций
-нет: сохранён прежний бюджет 250m/512Mi. История KRR неполная.
-[Подробности анализа](evidence/krr/RESULT.md).
-
-Базовый тест: 1500 запросов за 5 минут, 1499 ответов 201, один EOF, p95
-успешных ответов 41.37ms. [Сводка](evidence/order-load-result.md).
-
-PriorityClass задаёт scheduler priority; QoS не даёт иммунитета к preemption.
-PDB ограничивает добровольные выселения, но не падение ноды и не node-pressure
-eviction. При preemption соблюдение PDB не гарантировано. Один экземпляр
-PostgreSQL с PDB не становится отказоустойчивым.
-
-Статус: Helm-конфигурации проверены офлайн; применение и QoS в кластере
-не подтверждены. Batch добавлен отдельным изменением; без дополнительного values-файла отключён. Часть 6
-(Pending/preemption) не проведена; части 7–8 и SLA под перегрузкой не проверены.
-Текущий пользовательский кластер содержит три ноды вместо требуемых 1–2.
-
+API использует requests=limits 100m/100Mi: CPU поднят с рекомендации krr 10m
+после проблем холодного старта и таймаутов под нагрузкой. Для PostgreSQL
+сохранены прежние ресурсы: krr его не обнаружил. Эти ограничения описаны
+в отчёте. Проверка через Service: 150 заказов, 150 ответов 201, p95=52.78ms.
+Preemption и SLA под дефицитом ресурсов пока не проверены.
 
 ### Batch: сборка и включение
 
@@ -504,7 +481,7 @@ limits 1000m/512Mi). Параметры MEMORY_MB и CPU_WORKERS задаютс�
 Альтернативный Dockerfile.standalone собирает Java-реализацию через javac,
 без зависимостей Gradle/Kotlin; исходная Kotlin-реализация сохранена.
 Сборка standalone подтверждена предоставленным пользователем логом Docker,
-но импорт в kind и запуск пода пока не подтверждены.
+импорт в kind и запуск batch проверены: под Ready, QoS Burstable.
 
 ```bash
 docker build -f lab4/services/batch/Dockerfile.standalone -t registry.shop.local/batch:0.1.0 lab4/services/batch

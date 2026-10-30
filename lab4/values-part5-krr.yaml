@@ -1,16 +1,17 @@
 # KRR 1.28.0, 2026-10-30 23:28:47; one-hour window, 15s step.
 # Window includes only five minutes of successful order load; history warning remains.
-# api CPU limit is an adaptation for Guaranteed, not a KRR recommendation.
+# api CPU is raised to 100m after the 10m trial failed order load (DB timeouts).
+# Both request and limit are raised to keep Guaranteed; raw KRR remains 10m.
 protection:
   enabled: true
 api:
   replicas: 3
   resources:
     requests:
-      cpu: "10m"
+      cpu: "100m"
       memory: "100Mi"
     limits:
-      cpu: "10m"
+      cpu: "100m"
       memory: "100Mi"
 worker:
   resources:
