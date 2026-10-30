@@ -491,6 +491,9 @@ api-7f9fcbf86-f6tnp       1/1     Running   0          76m     10.244.1.11   sho
 а batch - `-1000`. Проверку проводили в двухнодовом `shop-lab4`; старый `shop`
 сохранили и остановили.
 
+Настройки частей 5-6 находятся в `lab3/chart/shop`, итоговые значения - в
+`lab4/values-part5-final.yaml`.
+
 ### Приоритеты и QoS
 
 У API и PostgreSQL сделали одинаковые requests и limits по CPU и памяти,
