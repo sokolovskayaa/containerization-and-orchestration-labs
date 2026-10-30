@@ -14,6 +14,9 @@ spec:
       labels:
         app: api
     spec:
+      {{- if .Values.protection.enabled }}
+      priorityClassName: {{ printf "%s-%s-critical" .Release.Namespace .Release.Name | quote }}
+      {{- end }}
       containers:
       - image: {{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}
         name: api
@@ -44,6 +47,9 @@ spec:
         - name: HEALTH_FAIL
           value: {{ .Values.api.healthFail | quote }}       
         resources:
+          requests:
+            cpu: {{ .Values.api.resources.requests.cpu }}
+            memory: {{ .Values.api.resources.requests.memory }}
           limits:
             cpu: {{ .Values.api.resources.limits.cpu }}
             memory: {{ .Values.api.resources.limits.memory }}
