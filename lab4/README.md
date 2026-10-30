@@ -463,3 +463,10 @@ api    5s
 | Worker | 100m | 10m | 128Mi | 100Mi |
 | Batch | 100m | 992m | 64Mi | около 183Mi |
 
+Выставил данные рекомендации в `values.yaml` и сделал rollout
+```
+NAME     CPU_REQUEST   MEM_REQUEST   CPU_LIMIT   MEM_LIMIT
+api      75m           100Mi         250m        256Mi
+worker   10m           100Mi         250m        256Mi
+```
+
