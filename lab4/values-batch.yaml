@@ -1,3 +1,0 @@
-batch:
-  enabled: true
-  replicas: 1

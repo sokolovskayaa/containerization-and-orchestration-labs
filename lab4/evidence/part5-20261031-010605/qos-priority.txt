@@ -1,8 +1,0 @@
-NAME                     PHASE     QOS          PRIORITY   CLASS                NOMINATED   NODE
-api-676b69b6cd-9nvpw     Running   Guaranteed   100000     shop-shop-critical   <none>      shop-worker
-api-676b69b6cd-jqjt4     Running   Guaranteed   100000     shop-shop-critical   <none>      shop-worker
-api-676b69b6cd-rcqtp     Running   Guaranteed   100000     shop-shop-critical   <none>      shop-worker2
-batch-77fdb54cc-sxkdx    Running   Burstable    -1000      shop-shop-batch      <none>      shop-worker2
-postgres-1               Running   Guaranteed   100000     shop-shop-critical   <none>      shop-worker
-worker-c4d48c984-6bqls   Running   Burstable    0          <none>               <none>      shop-worker
-worker-c4d48c984-x2vw2   Running   Burstable    0          <none>               <none>      shop-worker2
