@@ -444,23 +444,45 @@ api    5s
 ### Нагрузочный тест для Части 3
 
 Для создания реальной нагрузки был использован сценарий k6
-`lab4/load/order-load.js`. Через локальный port-forward он отправлял запросы
+`lab4/load-test.js`. Через локальный port-forward он отправлял запросы
 `POST /order`: API принимал запрос и записывал заказ в PostgreSQL.
 
 Параметры сценария: 5 виртуальных пользователей и 3 минуты работы. Результат:
 
-```text
-checks_total.......: 3669
-checks_succeeded...: 100.00%
-checks_failed......: 0.00%
-http_req_failed....: 0.00%
-http_reqs..........: 3669   20.359069/s
-http_req_duration..: avg=44.3ms  p(90)=101.91ms  p(95)=129.01ms  max=230.59ms
-```
+![](screenshots/04-k6run.png)
+![](screenshots/05-k6results.png)
 
-Все 3669 заказов были успешно созданы. Полученные метрики будут использованы
+Все 1698 заказов были успешно созданы. Полученные метрики будут использованы
 `krr` для рекомендации значений `requests` и `limits` критического пути.
 
+## Часть 4: Распределение реплик API
+
+Для равномерного распределения реплик между узлами кластера добавил в шаблон api deployment`а следующие значения:
+
+```yaml
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          nodeTaintsPolicy: Honor
+          labelSelector:
+            matchLabels:
+              app: api
+```
+
+Был выбран `topologySpreadConstraints` а не схожий `podAntiAffinity`, потому что у них разное предназначение и механизм работы: первый равномерно распределяет, а второй запрещает совместное проживание подов на одной ноде. Отказоустойчивость достигается за счет того что если одна из нод отвалится, то на другой гарантированно будут другие реплики, причем их количество будет примерно равно как на других нодах.
+
+Параметр `maxSkew: 1` ограничивает разницу в количестве реплик между нодами, а `whenUnsatisfiable: DoNotSchedule` запрещает размещать под, если не получается выполнить условие
+
+```
+kubectl get pods -n shop -o wide
+NAME                      READY   STATUS    RESTARTS   AGE     IP            NODE           NOMINATED NODE   READINESS GATES
+api-7f9fcbf86-2c8nl       1/1     Running   0          76m     10.244.1.14   shop-worker2   <none>           <none>
+api-7f9fcbf86-5s59p       1/1     Running   0          76m     10.244.2.17   shop-worker    <none>           <none>
+api-7f9fcbf86-f6tnp       1/1     Running   0          76m     10.244.1.11   shop-worker2   <none>           <none>
+...
+```
+Как видно 2 пода сидят на ноде `shop-worker2`, а 1 под на `shop-worker`, что соответствует нашим условиям
 
 ## Часть 5: Приоритеты, ресурсы и PDB
 
