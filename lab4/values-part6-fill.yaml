@@ -1,0 +1,6 @@
+# Increase gradually; 30 is a starting point, not a guaranteed fit for every cluster.
+batch:
+  replicas: 30
+# Keep one API pod while batch occupies the spare requests budget.
+api:
+  replicas: 1

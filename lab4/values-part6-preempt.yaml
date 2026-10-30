@@ -1,0 +1,3 @@
+# New high-priority API pods must be created AFTER low-priority batch fills nodes.
+api:
+  replicas: 3

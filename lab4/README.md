@@ -471,7 +471,7 @@ shop-shop-critical и shop-shop-batch. API и PostgreSQL используют к
 для API и primary PostgreSQL. Автоматические PDB CNPG при включении защиты
 отключаются, чтобы избежать пересечения бюджетов.
 
-Применение без batch:
+Применение с batch (после сборки и загрузки образа):
 
 ```bash
 helm upgrade shop lab3/chart/shop -n shop -f lab4/values-part5-krr.yaml
@@ -492,6 +492,25 @@ eviction. При preemption соблюдение PDB не гарантирова
 PostgreSQL с PDB не становится отказоустойчивым.
 
 Статус: Helm-конфигурации проверены офлайн; применение и QoS в кластере
-не подтверждены. Batch в этом изменении не добавляется и отключён. Часть 6
+не подтверждены. Batch добавлен отдельным изменением; без дополнительного values-файла отключён. Часть 6
 (Pending/preemption) не проведена; части 7–8 и SLA под перегрузкой не проверены.
 Текущий пользовательский кластер содержит три ноды вместо требуемых 1–2.
+
+
+### Batch: сборка и включение
+
+Добавлен Deployment с низким приоритетом и Burstable (requests 100m/256Mi,
+limits 1000m/512Mi). Параметры MEMORY_MB и CPU_WORKERS задаются через values.
+Альтернативный Dockerfile.standalone собирает Java-реализацию через javac,
+без зависимостей Gradle/Kotlin; исходная Kotlin-реализация сохранена.
+Сборка standalone подтверждена предоставленным пользователем логом Docker,
+но импорт в kind и запуск пода пока не подтверждены.
+
+```bash
+docker build -f lab4/services/batch/Dockerfile.standalone -t registry.shop.local/batch:0.1.0 lab4/services/batch
+kind load docker-image registry.shop.local/batch:0.1.0 --name shop
+helm upgrade shop lab3/chart/shop -n shop -f lab4/values-part5-krr.yaml -f lab4/values-batch.yaml --wait --timeout 3m
+```
+
+Автоматизированный вариант для context kind-shop:
+`bash lab4/scripts/finish-part5.sh`. Он включает batch дополнительным values-файлом.
