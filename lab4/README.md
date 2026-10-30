@@ -470,3 +470,31 @@ api      75m           100Mi         250m        256Mi
 worker   10m           100Mi         250m        256Mi
 ```
 
+## Часть 4: Распределение реплик API
+
+Для равномерного распределения реплик между узлами кластера добавил в шаблон api deployment`а следующие значения:
+
+```yaml
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          nodeTaintsPolicy: Honor
+          labelSelector:
+            matchLabels:
+              app: api
+```
+
+Был выбран `topologySpreadConstraints` а не схожий `podAntiAffinity`, потому что у них разное предназначение и механизм работы: первый равномерно распределяет, а второй запрещает совместное проживание подов на одной ноде. Отказоустойчивость достигается за счет того что если одна из нод отвалится, то на другой гарантированно будут другие реплики, причем их количество будет примерно равно как на других нодах.
+
+Параметр `maxSkew: 1` ограничивает разницу в количестве реплик между нодами, а `whenUnsatisfiable: DoNotSchedule` запрещает размещать под, если не получается выполнить условие
+
+```
+kubectl get pods -n shop -o wide
+NAME                      READY   STATUS    RESTARTS   AGE     IP            NODE           NOMINATED NODE   READINESS GATES
+api-7f9fcbf86-2c8nl       1/1     Running   0          76m     10.244.1.14   shop-worker2   <none>           <none>
+api-7f9fcbf86-5s59p       1/1     Running   0          76m     10.244.2.17   shop-worker    <none>           <none>
+api-7f9fcbf86-f6tnp       1/1     Running   0          76m     10.244.1.11   shop-worker2   <none>           <none>
+...
+```
+Как видно 2 пода сидят на ноде `shop-worker2`, а 1 под на `shop-worker`, что соответствует нашим условиям
