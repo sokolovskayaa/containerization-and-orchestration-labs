@@ -1,3 +1,3 @@
-# New high-priority API pods must be created AFTER low-priority batch fills nodes.
+# 15 new API pods need 1500m in total after low-priority batch has filled nodes.
 api:
-  replicas: 3
+  replicas: 16

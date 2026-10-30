@@ -1,6 +1,14 @@
-# Increase gradually; 30 is a starting point, not a guaranteed fit for every cluster.
-batch:
-  replicas: 30
-# Keep one API pod while batch occupies the spare requests budget.
+# Controlled scheduler experiment: reserve CPU without CPU/memory pressure.
 api:
   replicas: 1
+batch:
+  replicas: 20
+  memoryMb: 16
+  cpuWorkers: 0
+  resources:
+    requests:
+      cpu: "1000m"
+      memory: "128Mi"
+    limits:
+      cpu: "1500m"
+      memory: "256Mi"

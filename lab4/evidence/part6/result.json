@@ -1,0 +1,40 @@
+{
+  "before": {
+    "api": 1,
+    "batch_running": 13,
+    "batch_pending": 7
+  },
+  "after": {
+    "api_ready": 16,
+    "batch_running": 11,
+    "batch_pending": 9
+  },
+  "victims": [
+    {
+      "batch": "batch-5c5b6cfbdb-lg8lf",
+      "batch_uid": "4f3750d3-cd98-4d46-b9c6-b496c8382578",
+      "api": "api-676b69b6cd-vtglg",
+      "api_uid": "1e3f578a-8218-4168-a7e2-7d3aed19daf3",
+      "node": "shop-lab4-control-plane",
+      "message": "Preempted by pod 1e3f578a-8218-4168-a7e2-7d3aed19daf3 on node shop-lab4-control-plane"
+    },
+    {
+      "batch": "batch-5c5b6cfbdb-r65kq",
+      "batch_uid": "4753630f-b6a4-41e5-babc-a96d96ed1bf1",
+      "api": "api-676b69b6cd-td9l5",
+      "api_uid": "e460784b-0257-4cbf-8941-0cb3aa9bcfdf",
+      "node": "shop-lab4-worker",
+      "message": "Preempted by pod e460784b-0257-4cbf-8941-0cb3aa9bcfdf on node shop-lab4-worker"
+    }
+  ],
+  "orders_after_preemption": {
+    "target": "http://api.shop.svc.cluster.local/order",
+    "requests": 60,
+    "success_201": 60,
+    "failed": 0,
+    "elapsed_seconds": 11.819327423000686,
+    "rate_target": 5.0,
+    "p95_success_ms": 108.95587499999237,
+    "errors": []
+  }
+}

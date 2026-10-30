@@ -1,0 +1,5 @@
+# Remove old batch pods before changing their requests, avoiding a stalled rolling update.
+api:
+  replicas: 1
+batch:
+  replicas: 0
