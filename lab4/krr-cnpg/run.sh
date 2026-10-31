@@ -4,7 +4,7 @@ set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 lab4_source="${LAB4_KRR_SOURCE:-/private/tmp/lab4-krr-cnpg}"
 lab4_venv="${LAB4_KRR_VENV:-/private/tmp/lab4-krr-venv}"
-pin="$(cat "$root/krr-cnpg/upstream-commit.txt")"
+pin="f21d482d6974699ccd5bb07ef9e208430fbcafeb"
 command -v uv >/dev/null || { echo 'Install uv first: brew install uv' >&2; exit 1; }
 if [[ ! -d "$lab4_source/.git" ]]; then
   git clone https://github.com/robusta-dev/krr.git "$lab4_source"
@@ -18,4 +18,5 @@ fi
 uv python install 3.12.8
 if [[ ! -x "$lab4_venv/bin/python" ]]; then uv venv --python 3.12.8 "$lab4_venv"; fi
 uv pip install --python "$lab4_venv/bin/python" -r "$lab4_source/requirements.txt"
-printf 'Run KRR using: %s/bin/python %s/krr.py simple ...\n' "$lab4_venv" "$lab4_source"
+if [[ $# -eq 0 ]]; then set -- simple --help; fi
+exec "$lab4_venv/bin/python" "$lab4_source/krr.py" "$@"

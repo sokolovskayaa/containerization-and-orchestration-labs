@@ -1,2 +1,0 @@
-NAME	NAMESPACE	REVISION	UPDATED                             	STATUS  	CHART     	APP VERSION
-shop	shop     	8       	2026-10-31 02:04:26.847177 +0300 MSK	deployed	shop-0.1.0	1.0.0      

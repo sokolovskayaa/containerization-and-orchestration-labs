@@ -1,48 +1,32 @@
-# Generated from deployments-final.json and postgres-final.json in evidence/krr/.
-# CPU floors: API/worker 100m; PostgreSQL 250m. CPU limits retained for lab guardrails.
-{
-  "protection": {
-    "enabled": true
-  },
-  "batch": {
-    "enabled": true,
-    "replicas": 1
-  },
-  "api": {
-    "replicas": 3,
-    "resources": {
-      "requests": {
-        "cpu": "100m",
-        "memory": "100Mi"
-      },
-      "limits": {
-        "cpu": "100m",
-        "memory": "100Mi"
-      }
-    }
-  },
-  "worker": {
-    "resources": {
-      "requests": {
-        "cpu": "100m",
-        "memory": "100Mi"
-      },
-      "limits": {
-        "cpu": "250m",
-        "memory": "100Mi"
-      }
-    }
-  },
-  "postgres": {
-    "resources": {
-      "requests": {
-        "cpu": "250m",
-        "memory": "137Mi"
-      },
-      "limits": {
-        "cpu": "250m",
-        "memory": "137Mi"
-      }
-    }
-  }
-}
+# KRR CPU floors: API/worker 100m, PostgreSQL 250m.
+# Critical services use equal requests/limits for Guaranteed.
+protection:
+  enabled: true
+batch:
+  enabled: true
+  replicas: 1
+api:
+  replicas: 3
+  resources:
+    requests:
+      cpu: 100m
+      memory: 100Mi
+    limits:
+      cpu: 100m
+      memory: 100Mi
+worker:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 100Mi
+    limits:
+      cpu: 250m
+      memory: 100Mi
+postgres:
+  resources:
+    requests:
+      cpu: 250m
+      memory: 137Mi
+    limits:
+      cpu: 250m
+      memory: 137Mi
