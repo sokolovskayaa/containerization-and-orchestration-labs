@@ -30,3 +30,5 @@ postgres:
     limits:
       cpu: 250m
       memory: 137Mi
+scheduling:
+  mechanism: topologySpreadConstraints
