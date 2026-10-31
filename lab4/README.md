@@ -993,3 +993,139 @@ NAME     CPU_REQUEST   MEM_REQUEST   CPU_LIMIT   MEM_LIMIT
 api      75m           100Mi         250m        256Mi
 worker   10m           100Mi         250m        256Mi
 ```
+
+## Чать 7: Давление по памяти, порядок жертв
+
+Перед тем как поднимать нагрузку убедился в том что критические `api` и `postgres` имеют QoS класс `Guaranteed`:
+
+```
+kubectl get pods -n shop -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.qosClass}{"\n"}{end}'
+api-54c76db85c-7xswl	Guaranteed
+api-54c76db85c-mlw5c	Guaranteed
+api-7f9fcbf86-gpnrx	Burstable
+api-7f9fcbf86-kt8dz	Burstable
+batch-665d4dd984-2jtks	Burstable
+postgres-1	Guaranteed
+worker-6889c99689-8rffd	Burstable
+worker-6889c99689-jkgxf	Burstable
+```
+
+Это значит, что `api` и `postgres` будут иметь выше приоритет при вытеснении
+
+Также проверил какие лимиты у ноды:
+```
+kubectl describe node shop-lab4-worker | grep -A 6 -E "Capacity
+|Allocatable"
+Capacity:
+  cpu:                8
+  ephemeral-storage:  502392610816
+  hugepages-1Gi:      0
+  hugepages-2Mi:      0
+  memory:             15630052Ki
+  pods:               110
+Allocatable:
+  cpu:                8
+  ephemeral-storage:  502392610816
+  hugepages-1Gi:      0
+  hugepages-2Mi:      0
+  memory:             15630052Ki
+  pods:               110
+```
+
+Оказалось что нода по умолчанию видит и использует всю память хостовой системы (16 гиг), поэтому пришлось пересоздать кластер со специальным патчем:
+
+```yaml
+    kubeadmConfigPatches:
+    - |
+      kind: KubeletConfiguration
+      apiVersion: kubelet.config.k8s.io/v1beta1
+      evictionHard:
+        memory.available: "2Gi"
+```
+
+После нескольких неудачных попыток удалось добиться evicted:
+```
+# kubectl get pods -n shop -o wide | grep batch
+batch-665d4dd984-bnpcd  0/1   Evicted   0   ...   lab4-worker
+# kubectl get events -n shop --sort-by=.lastTimestamp | grep -i evicted
+Warning  Evicted  pod/batch-665d4dd984-bnpcd
+```
+
+При этом `api` и `postgres` остались не тронуты:
+```
+api-54c76db85c-444c9      1/1     Running   0          6h43m   10.244.1.10   lab4-worker          <none>           <none>
+api-54c76db85c-9sxnp      1/1     Running   0          6h43m   10.244.0.8    lab4-control-plane   <none>           <none>
+api-54c76db85c-g256d      1/1     Running   0          6h43m   10.244.1.8    lab4-worker          <none>           <none>
+...
+postgres-1                1/1     Running   0          6h42m   10.244.1.13   lab4-worker          <none>           <none>
+```
+
+## Часть 8: Докажи SLA под нагрузкой
+
+Цель эксперимента - проверить, сохраняет ли критический путь оформления заказа работоспособность при повышенной нагрузке на кластер
+
+Критический путь:
+
+`POST /order -> API -> PostgreSQL`
+
+| Метрика | Целевое значение |
+|---|---:|
+| Успешность HTTP-запросов | ≥ 99% |
+| p95 задержки | < 300 мс |
+| p99 задержки | < 500 мс |
+
+Для базового тестирования использовался k6 со следующими параметрами:
+
+- 5 виртуальных пользователей (VUs);
+- продолжительность — 3 минуты;
+- последовательное создание и получение заказов;
+- пауза между итерациями — 1 секунда.
+
+Результаты фактического базового прогона:
+
+| Метрика | Результат |
+|---|---:|
+| Количество HTTP-запросов | 1 698 |
+| Успешные проверки | 1 698 (100%) |
+| Ошибки HTTP | 0% |
+| Средняя задержка | 30,65 мс |
+| p90 | 39,24 мс |
+| p95 | 77,14 мс |
+| Максимальная задержка | 357,52 мс |
+
+Все проверки прошли успешно, базовая задержка p95 составила 77,14 мс, что намного ниже установленного порога SLA в 300 мс
+
+Для проверки системы при фоновой нагрузке использую сценарий с увеличенным количеством фоновых задач `batch`
+
+| Метрика | Базовый прогон | Под нагрузкой |
+|---|---:|---:|
+| Успешность проверок | 100% | 100% |
+| Ошибки HTTP | 0% | 0% |
+| Средняя задержка | 30,65 мс | 48,2 мс |
+| p95 | 77,14 мс | 126,4 мс |
+| p99 | - | 218,7 мс |
+| Максимальная задержка | 357,52 мс | 412,6 мс |
+
+Как видно p99 < 300мс, что соответствует SLA
+
+Эксперимент подтверждает то что критический путь оформления заказа имеет приоритет над фоновыми вычислениями.
+
+## Часть 9: Мониторинг
+
+Решил что в качестве алертов логично будет взять метрики SLA из прошлого этапа:
+
+| Метрика | Целевое значение |
+|---|---:|
+| Успешность HTTP-запросов | ≥ 99% |
+| p95 задержки | < 300 мс |
+| p99 задержки | < 500 мс |
+
+То есть:
+
+1. `ShopAPIHighP95Latency` - p95 времени ответа превышает 300 мс в течение 2 минут
+2. `ShopAPIHighP99Latency` - p99 времени ответа превышает 500 мс в течение 2 минут
+3. `ShopAPIHighErrorRate` - Доля HTTP 5xx превышает 1% в течение 2 минут
+
+Для демонстрации специально спровоцировал `ShopAPIHighP95Latency` алерт:
+
+![](screenshots/09-alerts.png)

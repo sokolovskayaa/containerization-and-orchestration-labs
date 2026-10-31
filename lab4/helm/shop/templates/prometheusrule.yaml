@@ -1,0 +1,55 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ .Release.Name }}-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    release: monitoring
+    app: {{ .Release.Name }}-api
+spec:
+  groups:
+    - name: shop-api-sla
+      rules:
+        - alert: ShopAPIHighP95Latency
+          expr: |
+            histogram_quantile(
+              0.95,
+              sum by (le) (
+                rate(shop_http_request_duration_seconds_bucket{path="/order"}[5m])
+              )
+            ) > 0.3
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Shop API p95 latency is above 300ms"
+            description: "95th percentile latency for POST /order has exceeded 300ms for 2 minutes."
+
+        - alert: ShopAPIHighP99Latency
+          expr: |
+            histogram_quantile(
+              0.99,
+              sum by (le) (
+                rate(shop_http_request_duration_seconds_bucket{path="/order"}[5m])
+              )
+            ) > 0.5
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Shop API p99 latency is above 500ms"
+            description: "99th percentile latency for POST /order has exceeded 500ms for 2 minutes."
+
+        - alert: ShopAPIHighErrorRate
+          expr: |
+            (
+              sum(rate(shop_http_requests_total{path="/order",status=~"5.."}[5m]))
+              /
+              sum(rate(shop_http_requests_total{path="/order"}[5m]))
+            ) > 0.01
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Shop API error rate is above 1%"
+            description: "HTTP 5xx error rate for POST /order has exceeded 1% for 2 minutes."

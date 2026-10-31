@@ -6,10 +6,10 @@ api:
   resources:
     requests:
       cpu: "75m"
-      memory: "100Mi"
+      memory: "128Mi"
     limits:
-      cpu: "250m"
-      memory: "256Mi"
+      cpu: "75m"
+      memory: "128Mi"
 
 worker:
   replicas: 2
@@ -36,11 +36,11 @@ postgres:
       cpu: "100m"
       memory: "130Mi"
     limits:
-      cpu: "500m"
-      memory: "1Gi"
+      cpu: "100m"
+      memory: "130Mi"
 
 batch:
-  replicas: 1
+  replicas: 4
   image:
     repository: registry.shop.local/batch
     tag: "0.1.0"

@@ -9,3 +9,9 @@ nodes:
         nodeRegistration:
           taints: []
   - role: worker
+    kubeadmConfigPatches:
+    - |
+      kind: KubeletConfiguration
+      apiVersion: kubelet.config.k8s.io/v1beta1
+      evictionHard:
+        memory.available: "2Gi"
