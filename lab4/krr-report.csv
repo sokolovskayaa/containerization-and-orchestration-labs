@@ -1,0 +1,4 @@
+service,raw_cpu_request,raw_memory_request,cpu_floor,final_cpu_request,final_memory_request
+api,11m,100Mi,100m,100m,100Mi
+worker,10m,100Mi,100m,100m,100Mi
+postgres,26m,137Mi,250m,250m,137Mi

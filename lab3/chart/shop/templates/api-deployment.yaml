@@ -17,6 +17,26 @@ spec:
       {{- if .Values.protection.enabled }}
       priorityClassName: {{ printf "%s-%s-critical" .Release.Namespace .Release.Name | quote }}
       {{- end }}
+      {{- if eq .Values.scheduling.mechanism "topologySpreadConstraints" }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          nodeTaintsPolicy: Honor
+          labelSelector:
+            matchLabels:
+              app: api
+      {{- else if eq .Values.scheduling.mechanism "podAntiAffinity" }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app: api
+      {{- else }}
+      {{- fail "scheduling.mechanism must be topologySpreadConstraints or podAntiAffinity" }}
+      {{- end }}
       containers:
       - image: {{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}
         name: api

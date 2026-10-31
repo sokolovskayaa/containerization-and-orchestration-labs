@@ -1,6 +1,0 @@
-Error from server: error when creating "lab3/bad-manifests/02-no-limits.yaml": admission webhook "validate.kyverno.svc-fail" denied the request: 
-
-resource Pod/default/api was blocked due to the following policies 
-
-require-limits:
-  only-shop-limits: 'validation error: Лимиты не указаны: задай resources.limits.cpu и resources.limits.memory для каждого контейнера. rule only-shop-limits failed at path /spec/containers/0/resources/limits/'

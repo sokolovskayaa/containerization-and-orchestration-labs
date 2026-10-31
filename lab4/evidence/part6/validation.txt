@@ -1,2 +1,0 @@
-PASS: insufficient CPU confirmed; 2 running batch pods preempted by identified high-priority API UIDs; 16 API Ready; 60/60 orders created.
-PASS: normal replicas and original batch parameters restored; all 7 pods Ready.
